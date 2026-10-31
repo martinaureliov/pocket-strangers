@@ -9,6 +9,15 @@ Engine: **Godot 4.7**, GDScript only, GL Compatibility renderer, 1920×1080 base
 - Import (needed on a fresh checkout, since `.godot/` isn't committed): `godot --headless --path . --import`
 - Run tests: `godot --headless --path . --script res://tests/test_runner.gd` (exit code 0 = pass)
 - Run game: `godot --path .`
+- Check for new Godot releases: `tools/check_versions.sh`
+
+## Keep the user informed about new versions
+
+At the start of each session, run `tools/check_versions.sh`. Tell the user if a new **stable** Godot release is
+out, so they can download it. Mention a new beta or RC only briefly, as information, and don't recommend
+switching to it. The pinned version is `GODOT_VERSION` in `.github/workflows/ci.yml`. When upgrading, change it
+there and in `config/features` in `project.godot`, and update the version notes in `README.md` and here.
+The same applies to any addon added to `addons/` (e.g. Dialogue Manager): mention new releases when you notice them.
 
 ## Structure and conventions
 
