@@ -298,7 +298,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_toggle_backlog()
 		return
-	var clicked := event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+	var clicked: bool = event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT
 	if not (clicked or event.is_action_pressed("ui_accept")):
 		return
 	get_viewport().set_input_as_handled()

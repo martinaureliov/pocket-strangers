@@ -1,0 +1,16 @@
+[remap]
+
+importer="dialogue_manager"
+importer_version=18
+type="Resource"
+uid="uid://bp66vghf6881k"
+path="res://.godot/imported/ep01_placeholder.dialogue-4b1c1962238a5bc041e53c94081ee8dc.tres"
+
+[deps]
+
+source_file="res://episodes/ep01/dialogue/ep01_placeholder.dialogue"
+dest_files=["res://.godot/imported/ep01_placeholder.dialogue-4b1c1962238a5bc041e53c94081ee8dc.tres"]
+
+[params]
+
+defaults=true

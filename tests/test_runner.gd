@@ -323,7 +323,22 @@ func test_scenes_load() -> bool:
 		"res://scenes/puzzles/combination_lock/combination_lock_puzzle.tscn",
 	]:
 		check(load(path) is PackedScene, "%s loads" % path)
+	# A scene still loads when its script has a parse error, so compile every script explicitly.
+	for dir: String in ["res://scenes", "res://scripts", "res://episodes"]:
+		for path: String in _find_files(dir, ".gd"):
+			var script := load(path) as Script
+			check(script != null and script.can_instantiate(), "%s compiles" % path)
 	return true
+
+
+func _find_files(dir_path: String, extension: String) -> Array[String]:
+	var result: Array[String] = []
+	for file: String in DirAccess.get_files_at(dir_path):
+		if file.ends_with(extension):
+			result.append(dir_path.path_join(file))
+	for sub: String in DirAccess.get_directories_at(dir_path):
+		result.append_array(_find_files(dir_path.path_join(sub), extension))
+	return result
 
 
 func test_puzzle_scene_builds_and_finishes() -> bool:
