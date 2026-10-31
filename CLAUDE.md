@@ -10,6 +10,11 @@ Engine: **Godot 4.7**, GDScript only, GL Compatibility renderer, 1920×1080 base
 - Run tests: `godot --headless --path . --script res://tests/test_runner.gd` (exit code 0 = pass)
 - Run game: `godot --path .`
 - Check for new Godot releases: `tools/check_versions.sh`
+- Cloud sessions have no Godot installed. Download the official build into the scratchpad (not the repo) and verify it:
+  `Godot_v<ver>-stable_linux.x86_64.zip` plus `SHA512-SUMS.txt` from
+  `https://github.com/godotengine/godot/releases/download/<ver>-stable/`, then `sha512sum -c`. Screenshots work with
+  `xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-driver opengl3 --resolution 1920x1080 --script <tool.gd>`.
+- UI styling lives in `assets/ui/theme.tres` (project theme): change it there rather than per node.
 
 ## Keep the user informed about new versions
 
