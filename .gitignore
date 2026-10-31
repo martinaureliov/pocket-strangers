@@ -1,0 +1,25 @@
+# Godot 4+ generated/cache files
+.godot/
+.nomedia
+/android/
+
+# Export output
+/build/
+/export/
+*.pck
+*.zip
+
+# Mono / C# (in case it's ever enabled)
+.mono/
+data_*/
+mono_crash.*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# Claude Code local settings (shared settings in .claude/settings.json are committed)
+.claude/settings.local.json
