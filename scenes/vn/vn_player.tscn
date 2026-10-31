@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://scenes/vn/vn_player.gd" id="1_player"]
 [ext_resource type="PackedScene" path="res://addons/dialogue_manager/nodes/dialogue_label/dialogue_label.tscn" id="2_label"]
 [ext_resource type="PackedScene" path="res://scenes/ui/save_load_screen/save_load_screen.tscn" id="3_slots"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_screen/settings_screen.tscn" id="4_settings"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_box"]
 bg_color = Color(0.07, 0.065, 0.1, 0.88)
@@ -120,7 +121,7 @@ layout_mode = 1
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -800.0
+offset_left = -880.0
 offset_top = 24.0
 offset_right = -24.0
 offset_bottom = 72.0
@@ -151,6 +152,11 @@ grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_backlog")
 
 [node name="SaveLoadScreen" parent="." instance=ExtResource("3_slots")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="SettingsScreen" parent="." instance=ExtResource("4_settings")]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1

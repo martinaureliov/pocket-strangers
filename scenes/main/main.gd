@@ -5,6 +5,7 @@ extends Control
 
 @onready var _episode_list: VBoxContainer = %EpisodeList
 @onready var _save_screen: SaveLoadScreen = %SaveLoadScreen
+@onready var _settings_screen: SettingsScreen = %SettingsScreen
 
 
 func _ready() -> void:
@@ -14,6 +15,7 @@ func _ready() -> void:
 		_load_slot(latest)  # Fresh launch: show saved progress.
 	_save_screen.slot_chosen.connect(_on_slot_chosen)
 	_save_screen.closed.connect(_focus_first_button)
+	_settings_screen.closed.connect(_focus_first_button)
 	if not latest.is_empty():
 		_episode_list.add_child(_make_button("Continue", _continue))
 		_episode_list.add_child(_make_button("Load", _open_load_screen))
@@ -26,6 +28,7 @@ func _ready() -> void:
 			button.disabled = true
 			button.tooltip_text = "Coming soon"
 		_episode_list.add_child(button)
+	_episode_list.add_child(_make_button("Settings", _settings_screen.open))
 	_focus_first_button()
 
 

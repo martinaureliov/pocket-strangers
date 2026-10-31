@@ -58,6 +58,7 @@ var _toast_tween: Tween
 @onready var _backlog: PanelContainer = %Backlog
 @onready var _toast: Label = %Toast
 @onready var _save_screen: SaveLoadScreen = %SaveLoadScreen
+@onready var _settings_screen: SettingsScreen = %SettingsScreen
 
 
 func _ready() -> void:
@@ -67,6 +68,9 @@ func _ready() -> void:
 	runner.ended.connect(_on_ended)
 	_save_screen.slot_chosen.connect(_on_slot_chosen)
 	_save_screen.closed.connect(get_viewport().gui_release_focus)  # Keep Space/Enter for advancing.
+	_settings_screen.closed.connect(get_viewport().gui_release_focus)
+	Settings.changed.connect(_on_settings_changed)
+	_apply_text_speed()
 	_build_quick_menu()
 	_build_backlog()
 	_dialogue_box.hide()
@@ -231,7 +235,7 @@ func _schedule_auto_advance(serial: int) -> void:
 	if skip_mode:
 		delay = SKIP_DELAY
 	elif auto_mode:
-		delay = AUTO_DELAY_BASE + AUTO_DELAY_PER_CHAR * runner.line.text.length()
+		delay = (AUTO_DELAY_BASE + AUTO_DELAY_PER_CHAR * runner.line.text.length()) * Settings.auto_delay_scale()
 	elif runner.line and runner.line.time != "":
 		delay = AUTO_DELAY_PER_CHAR * runner.line.text.length() if runner.line.time == "auto" else runner.line.time.to_float()
 	if delay < 0.0:
@@ -291,7 +295,7 @@ func _on_ended() -> void:
 #region Input
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _save_screen.visible:
+	if _save_screen.visible or _settings_screen.visible:
 		return
 	if _backlog.visible:
 		if event.is_action_pressed("ui_cancel"):
@@ -367,6 +371,23 @@ func _on_slot_chosen(slot: String) -> void:
 #endregion
 
 
+#region Settings
+
+func _open_settings_screen() -> void:
+	_set_skip(false)
+	_settings_screen.open()
+
+
+func _on_settings_changed(_key: StringName) -> void:
+	_apply_text_speed()
+
+
+func _apply_text_speed() -> void:
+	_dialogue_label.seconds_per_step = Settings.seconds_per_char()
+
+#endregion
+
+
 #region UI
 
 func _build_quick_menu() -> void:
@@ -377,6 +398,7 @@ func _build_quick_menu() -> void:
 	_quick_menu.add_child(_auto_button)
 	_skip_button = _menu_button("Skip", _set_skip, true)
 	_quick_menu.add_child(_skip_button)
+	_quick_menu.add_child(_menu_button("Settings", _open_settings_screen))
 	_quick_menu.add_child(_menu_button("Title", get_tree().change_scene_to_file.bind(TITLE_SCENE)))
 
 
@@ -468,7 +490,7 @@ func _toggle_backlog() -> void:
 
 
 func _overlay_open() -> bool:
-	return _backlog.visible or _save_screen.visible
+	return _backlog.visible or _save_screen.visible or _settings_screen.visible
 
 
 func _show_toast(text: String) -> void:

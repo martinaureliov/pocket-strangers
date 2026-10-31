@@ -19,6 +19,10 @@ const TEST_SAVES := TEST_DIR + "/saves"
 const TEST_SYSTEM := TEST_DIR + "/system.json"
 const TEST_LEGACY := TEST_DIR + "/legacy_save.json"
 const LOAD_SCREEN_SCENE := "res://scenes/ui/save_load_screen/save_load_screen.tscn"
+const SETTINGS_SCREEN_SCENE := "res://scenes/ui/settings_screen/settings_screen.tscn"
+## Safe to preload: the Settings script doesn't name any autoload.
+const SettingsScript := preload("res://scripts/autoload/settings.gd")
+const TEST_SETTINGS := TEST_DIR + "/settings.cfg"
 
 var passed := 0
 var failed := 0
@@ -33,6 +37,10 @@ func _initialize() -> void:
 		autoload_state.save_dir = TEST_DIR + "/autoload_saves"
 		autoload_state.system_path = TEST_DIR + "/autoload_system.json"
 		autoload_state.clear_seen_lines()  # _ready loaded the developer's read lines.
+	var autoload_settings := root.get_node_or_null("Settings")
+	if autoload_settings != null:
+		autoload_settings.path = TEST_SETTINGS
+		autoload_settings.reset_to_defaults()  # _ready loaded the developer's settings.
 	for method in get_method_list():
 		var test_name: String = method.name
 		if not test_name.begins_with("test_"):
@@ -40,6 +48,8 @@ func _initialize() -> void:
 		if await call(test_name) != true:
 			failed += 1
 			push_error("FAIL %s: did not finish (runtime error?)" % test_name)
+	if autoload_settings != null:
+		autoload_settings.reset_to_defaults()  # Leave the audio buses at their defaults.
 	_remove_dir(TEST_DIR)
 	print("Results: %d passed, %d failed" % [passed, failed])
 	quit(1 if failed > 0 else 0)
@@ -642,7 +652,21 @@ func test_episode1_scene_shows_first_line() -> bool:
 	check_eq(game_state.current_episode, &"ep01", "episode started")
 	check_eq(player.get_node("%Background").get_child_count(), 1, "background placeholder drawn")
 	check(player.get_node("%DialogueBox").visible, "dialogue box visible")
-	check_eq(player.get_node("%QuickMenu").get_child_count(), 6, "quick menu built")
+	var quick_menu := player.get_node("%QuickMenu")
+	check_eq(quick_menu.get_child_count(), 7, "quick menu built")
+	var menu_labels: Array[String] = []
+	for button: Button in quick_menu.get_children():
+		menu_labels.append(button.text)
+	check(menu_labels.has("Settings"), "quick menu has a Settings button")
+	var settings := root.get_node_or_null("Settings")
+	check(settings != null, "Settings autoload is available")
+	if settings != null:
+		var label := player.get_node("%DialogueLabel")
+		check(is_equal_approx(label.seconds_per_step, settings.seconds_per_char()), "typing speed follows the text speed setting")
+		settings.set_value(&"text_speed", 1.0)
+		check_eq(label.seconds_per_step, 0.0, "max text speed types instantly")
+		settings.reset_to_defaults()
+		check(is_equal_approx(label.seconds_per_step, settings.seconds_per_char()), "typing speed follows a reset")
 	player.queue_free()
 	await process_frame
 	return true
@@ -741,5 +765,278 @@ func test_episode1_save_to_slot() -> bool:
 	player.queue_free()
 	await process_frame
 	game_state.reset()
+	_reset_test_dir()
+	return true
+
+
+func test_title_screen_has_settings_button() -> bool:
+	var title := (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
+	root.add_child(title)
+	await process_frame
+	var list := title.get_node_or_null("%EpisodeList")
+	check(list != null, "title has an episode list")
+	if list != null and list.get_child_count() > 0:
+		var last := list.get_child(list.get_child_count() - 1) as Button
+		check(last != null and last.text == "Settings", "title episode list ends with a Settings button")
+	else:
+		check(false, "title episode list has children")
+	title.queue_free()
+	await process_frame
+	return true
+
+
+# --- Settings -----------------------------------------------------------------
+
+## A Settings that is not in the tree and stores its file in the test folder.
+func _new_settings(file_name: String = "settings_fresh.cfg") -> Node:
+	DirAccess.make_dir_recursive_absolute(TEST_DIR)
+	var settings := SettingsScript.new()
+	settings.path = TEST_DIR.path_join(file_name)
+	return settings
+
+
+func _bus_db(bus_name: String) -> float:
+	return AudioServer.get_bus_volume_db(AudioServer.get_bus_index(bus_name))
+
+
+func _approx(a: float, b: float, tolerance: float = 0.01) -> bool:
+	return absf(a - b) <= tolerance
+
+
+## True when a settings control (slider or toggle) shows the given setting value.
+func _control_matches(control: Control, value: Variant) -> bool:
+	if control is Range:
+		return _approx((control as Range).value, float(value), 0.01)
+	if control is BaseButton:
+		return (control as BaseButton).button_pressed == value
+	return false
+
+
+func test_settings_defaults() -> bool:
+	var settings := _new_settings()
+	var defaults: Dictionary = SettingsScript.DEFAULTS
+	check(defaults.size() > 0, "settings have defaults")
+	for key: StringName in defaults:
+		check_eq(settings.get_value(key), defaults[key], "default %s" % key)
+	check_eq(settings.get_value(&"no_such_setting"), null, "unknown key reads as null")
+	settings.free()
+	return true
+
+
+func test_settings_clamp_and_ignore_bad_values() -> bool:
+	var settings := _new_settings()
+	var changes: Array[StringName] = []
+	settings.changed.connect(func(key: StringName) -> void: changes.append(key))
+	settings.set_value(&"music_volume", 1.5)
+	check_eq(settings.get_value(&"music_volume"), 1.0, "volume clamped to 1")
+	settings.set_value(&"music_volume", -0.5)
+	check_eq(settings.get_value(&"music_volume"), 0.0, "volume clamped to 0")
+	settings.set_value(&"text_speed", 3)
+	check_eq(settings.get_value(&"text_speed"), 1.0, "int value accepted and clamped")
+	check(settings.get_value(&"text_speed") is float, "int value stored as float")
+	check_eq(changes.size(), 3, "changed emitted for each accepted change")
+	changes.clear()
+	settings.set_value(&"no_such_setting", 1.0)
+	settings.set_value(&"fullscreen", "yes")
+	settings.set_value(&"sfx_volume", "loud")
+	settings.set_value(&"text_speed", true)
+	check_eq(settings.get_value(&"fullscreen"), false, "wrong type ignored for bool")
+	check_eq(settings.get_value(&"sfx_volume"), 0.8, "wrong type ignored for float")
+	check_eq(settings.get_value(&"text_speed"), 1.0, "bool does not replace a float")
+	check(changes.is_empty(), "ignored values emit nothing")
+	check_eq(settings.get_value(&"no_such_setting"), null, "unknown key not stored")
+	settings.reset_to_defaults()
+	settings.free()
+	root.get_node("Settings").reset_to_defaults()  # The instance above changed the shared buses.
+	return true
+
+
+func test_settings_speed_curves() -> bool:
+	var settings := _new_settings()
+	settings.set_value(&"text_speed", 0.0)
+	check(_approx(settings.seconds_per_char(), 0.08, 0.0001), "slowest typing is 0.08s per character")
+	settings.set_value(&"text_speed", 0.5)
+	check(_approx(settings.seconds_per_char(), 0.02, 0.0005), "middle typing speed is about 0.02s")
+	settings.set_value(&"text_speed", 0.999)
+	check(settings.seconds_per_char() > 0.0, "just under max is still typed")
+	settings.set_value(&"text_speed", 1.0)
+	check_eq(settings.seconds_per_char(), 0.0, "max text speed is instant")
+	var previous := INF
+	for i in 11:
+		settings.set_value(&"text_speed", i / 10.0)
+		var seconds: float = settings.seconds_per_char()
+		check(seconds < previous, "typing delay shrinks as text speed rises (%d)" % i)
+		previous = seconds
+
+	settings.set_value(&"auto_speed", 0.0)
+	check(_approx(settings.auto_delay_scale(), 2.0, 0.0001), "slowest auto delay scale is 2")
+	settings.set_value(&"auto_speed", 0.5)
+	check(_approx(settings.auto_delay_scale(), 1.0, 0.0001), "middle auto delay scale is 1")
+	settings.set_value(&"auto_speed", 1.0)
+	check(_approx(settings.auto_delay_scale(), 0.5, 0.0001), "fastest auto delay scale is 0.5")
+	previous = INF
+	for i in 11:
+		settings.set_value(&"auto_speed", i / 10.0)
+		var scale: float = settings.auto_delay_scale()
+		check(scale < previous, "auto delay shrinks as auto speed rises (%d)" % i)
+		previous = scale
+	settings.free()
+	return true
+
+
+func test_settings_save_and_load_round_trip() -> bool:
+	_reset_test_dir()
+	var settings := _new_settings("round_trip.cfg")
+	settings.set_value(&"text_speed", 0.25)
+	settings.set_value(&"auto_speed", 0.75)
+	settings.set_value(&"master_volume", 0.4)
+	settings.set_value(&"music_volume", 0.3)
+	settings.set_value(&"sfx_volume", 0.2)
+	settings.set_value(&"voice_volume", 0.1)
+	settings.set_value(&"fullscreen", true)
+	check_eq(settings.save(), OK, "settings save")
+	check(FileAccess.file_exists(settings.path), "settings file written")
+
+	var loaded := _new_settings("round_trip.cfg")
+	loaded.load_settings()
+	for key: StringName in SettingsScript.DEFAULTS:
+		check_eq(loaded.get_value(key), settings.get_value(key), "round trip %s" % key)
+	check_eq(loaded.get_value(&"fullscreen"), true, "bool survives the round trip")
+	settings.free()
+	loaded.free()
+	root.get_node("Settings").reset_to_defaults()  # The instances above changed the shared buses.
+	return true
+
+
+func test_settings_missing_or_corrupt_file_gives_defaults() -> bool:
+	_reset_test_dir()
+	var missing := _new_settings("does_not_exist.cfg")
+	missing.set_value(&"text_speed", 0.1)
+	missing.load_settings()
+	check_eq(missing.get_value(&"text_speed"), 0.5, "missing file: defaults")
+	missing.free()
+
+	_write_text(TEST_DIR.path_join("corrupt.cfg"), "this is [not a valid\nconfig = = file")
+	var corrupt := _new_settings("corrupt.cfg")
+	corrupt.set_value(&"music_volume", 0.1)
+	corrupt.load_settings()
+	for key: StringName in SettingsScript.DEFAULTS:
+		check_eq(corrupt.get_value(key), SettingsScript.DEFAULTS[key], "corrupt file: default %s" % key)
+	corrupt.free()
+
+	# Partial content: unknown keys and wrong types are skipped, valid keys are kept.
+	_write_text(TEST_DIR.path_join("partial.cfg"), "[settings]\nmusic_volume=0.3\nsfx_volume=\"loud\"\nbogus=1\n")
+	var partial := _new_settings("partial.cfg")
+	partial.load_settings()
+	check(_approx(partial.get_value(&"music_volume"), 0.3, 0.0001), "partial file: valid key loaded")
+	check_eq(partial.get_value(&"sfx_volume"), 0.8, "partial file: wrong type falls back to the default")
+	check_eq(partial.get_value(&"bogus"), null, "partial file: unknown key ignored")
+	partial.free()
+	root.get_node("Settings").reset_to_defaults()
+	return true
+
+
+func test_settings_volumes_reach_audio_buses() -> bool:
+	var settings := _new_settings()
+	for key: StringName in SettingsScript.VOLUME_BUSES:
+		var bus_name: String = SettingsScript.VOLUME_BUSES[key]
+		var bus := AudioServer.get_bus_index(bus_name)
+		check(bus >= 0, "audio bus %s exists" % bus_name)
+		if bus < 0:
+			continue
+		settings.set_value(key, 0.5)
+		check(_approx(AudioServer.get_bus_volume_db(bus), linear_to_db(0.5)), "%s sets bus %s volume" % [key, bus_name])
+		check(not AudioServer.is_bus_mute(bus), "bus %s not muted at 0.5" % bus_name)
+		settings.set_value(key, 0.0)
+		check(AudioServer.is_bus_mute(bus), "bus %s muted at 0" % bus_name)
+		settings.set_value(key, 0.25)
+		check(not AudioServer.is_bus_mute(bus), "bus %s unmuted again" % bus_name)
+		check(_approx(AudioServer.get_bus_volume_db(bus), linear_to_db(0.25)), "bus %s volume after unmute" % bus_name)
+	settings.reset_to_defaults()
+	check(_approx(_bus_db("Music"), linear_to_db(0.8)), "reset restores the Music bus")
+	settings.free()
+	return true
+
+
+func test_bus_layout_has_expected_buses() -> bool:
+	for bus_name: String in ["Master", "Music", "SFX", "Ambience", "Voice"]:
+		check(AudioServer.get_bus_index(bus_name) >= 0, "bus %s exists" % bus_name)
+	var ambience := AudioServer.get_bus_index("Ambience")
+	if ambience >= 0:
+		check_eq(AudioServer.get_bus_send(ambience), &"SFX", "Ambience sends to SFX")
+	return true
+
+
+func test_settings_screen() -> bool:
+	var settings := root.get_node_or_null("Settings")
+	check(settings != null, "Settings autoload is available")
+	if settings == null:
+		return true
+	_reset_test_dir()
+	settings.reset_to_defaults()
+	var screen := (load(SETTINGS_SCREEN_SCENE) as PackedScene).instantiate()
+	check(screen != null and screen.has_signal("closed"), "settings screen scene is a SettingsScreen")
+	if screen == null:
+		return true
+	root.add_child(screen)
+	await process_frame
+	var closed: Array[bool] = []
+	screen.closed.connect(func() -> void: closed.append(true))
+	screen.open()
+	check(screen.visible, "settings screen shown")
+
+	var controls: Dictionary = screen.controls
+	var defaults: Dictionary = SettingsScript.DEFAULTS
+	for key: StringName in defaults:
+		check(controls.has(key), "control for %s" % key)
+		if controls.has(key):
+			check(_control_matches(controls[key], settings.get_value(key)), "control for %s shows the setting" % key)
+
+	# Moving a slider changes the setting at once.
+	var slider := controls.get(&"text_speed") as Range
+	check(slider != null, "text_speed control is a Range")
+	if slider != null:
+		slider.value = 0.9
+		check(_approx(settings.get_value(&"text_speed"), slider.value, 0.0001), "slider change reaches Settings")
+		check(settings.get_value(&"text_speed") > 0.8, "slider change is not lost")
+	var music := controls.get(&"music_volume") as Range
+	if music != null:
+		music.value = 0.3
+		check(_approx(settings.get_value(&"music_volume"), music.value, 0.0001), "music slider change reaches Settings")
+		check(_approx(_bus_db("Music"), linear_to_db(maxf(music.value, 0.0001))), "music slider reaches the bus")
+	var fullscreen := controls.get(&"fullscreen") as BaseButton
+	check(fullscreen != null, "fullscreen control is a button")
+	if fullscreen != null:
+		fullscreen.button_pressed = true
+		check_eq(settings.get_value(&"fullscreen"), true, "checkbox change reaches Settings")
+
+	# Defaults button restores everything, in Settings and in the controls.
+	var defaults_button := screen.find_child("DefaultsButton", true, false) as BaseButton
+	check(defaults_button != null, "DefaultsButton exists")
+	check(screen.find_child("BackButton", true, false) is BaseButton, "BackButton exists")
+	if defaults_button != null:
+		defaults_button.pressed.emit()
+		for key: StringName in defaults:
+			check_eq(settings.get_value(key), defaults[key], "defaults button resets %s" % key)
+			if controls.has(key):
+				check(_control_matches(controls[key], defaults[key]), "defaults button resets the %s control" % key)
+
+	# close() saves to the (redirected) settings path and emits closed.
+	check(settings.path.begins_with(TEST_DIR), "settings were redirected to the test folder")
+	DirAccess.remove_absolute(settings.path)
+	check(not FileAccess.file_exists(settings.path), "settings file removed before close")
+	if slider != null:
+		slider.value = 0.6
+	screen.close()
+	check(FileAccess.file_exists(settings.path), "close() writes the settings file")
+	check_eq(closed.size(), 1, "close() emits closed once")
+	var saved := ConfigFile.new()
+	check_eq(saved.load(settings.path), OK, "saved settings file parses")
+	if slider != null:
+		check(_approx(float(saved.get_value(SettingsScript.SECTION, "text_speed", -1.0)), 0.6, 0.0001), "saved file holds the last slider value")
+
+	screen.queue_free()
+	await process_frame
+	settings.reset_to_defaults()
 	_reset_test_dir()
 	return true

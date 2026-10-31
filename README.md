@@ -14,10 +14,11 @@ Built with **Godot 4.7** (GDScript, GL Compatibility renderer) and
 3. Press **F5** to run. The title screen lists Episodes 1–5. Each one is disabled until it has an entry scene.
 
 **Controls:** click or Space/Enter to advance; click again while text is typing to show it all. Mouse wheel up
-opens the log. The top-right buttons are Save, Load, Log, Auto, Skip (only lines you've read) and Title.
+opens the log. The top-right buttons are Save, Load, Log, Auto, Skip (only lines you've read), Settings and Title.
 Save and Load open a slot screen (Auto plus 9 slots); Esc or Back closes it, and saving over a used slot asks first.
 The Auto slot is written at the end of each episode. When a save exists, the title screen has Continue (latest
-save) and Load.
+save) and Load. Settings (text speed, auto speed, volumes, fullscreen) is at the bottom of the title screen's list
+and in the quick menu; Esc or Back closes it and saves.
 
 ## Project layout
 
@@ -26,9 +27,9 @@ assets/          art (backgrounds, characters, cgs, ui), audio (music, sfx, ambi
 episodes/epXX/   one folder per episode: episode.tres (metadata), dialogue/*.dialogue, scenes, scripts
 scenes/main/     boot / title scene
 scenes/vn/       VN player: background, characters, text box, choices, backlog, auto/skip, save/load
-scenes/ui/       other shared UI: save_load_screen/ (slot list), later settings and menus
+scenes/ui/       other shared UI: save_load_screen/ (slot list), settings_screen/
 scenes/puzzles/  puzzle scenes (extend Puzzle)
-scripts/autoload/ GameState: current episode, story flags, save/load
+scripts/autoload/ GameState (current episode, story flags, save/load), Settings (player preferences)
 scripts/data/    Resource classes (Episode, …)
 scripts/vn/      StoryRunner: steps through dialogue without UI
 scripts/puzzles/ puzzle rules (testable, no UI)

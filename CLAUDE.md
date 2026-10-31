@@ -93,6 +93,21 @@ Docs (match the installed version): https://github.com/nathanhoad/godot_dialogue
   boundaries. The save format is v3 (adds `meta`: `saved_at` and a preview text for the slot list). Bump
   `SAVE_VERSION` and extend `GameState.migrate()` whenever the save format changes.
 
+## Settings and audio
+
+- `Settings` (`scripts/autoload/settings.gd`, registered after `GameState`) holds player preferences: `text_speed`,
+  `auto_speed`, `master_volume`, `music_volume`, `sfx_volume`, `voice_volume` and `fullscreen`. They're shared by all
+  save slots and stored in `user://settings.cfg` (a `ConfigFile`). Story state stays in `GameState`; preferences go in
+  `Settings`.
+- Every change applies at once. `Settings.save()` keeps it (the settings screen saves when it closes).
+- Speeds and volumes are 0..1 slider positions. Don't read them raw: use `Settings.seconds_per_char()` (the
+  `DialogueLabel` typing delay, 0 = instant) and `Settings.auto_delay_scale()`.
+- Buses are in `default_bus_layout.tres`: `Master`, `Music`, `SFX`, `Ambience` (routes through `SFX`, so the sound
+  effects slider covers it) and `Voice`. New audio players must use these bus names.
+- `SettingsScreen` (`scenes/ui/settings_screen/`) is a modal like `SaveLoadScreen`. Esc or Back closes it and saves.
+  The VN player's quick menu and the title screen open it.
+- Tests must not touch real settings: point `Settings.path` at the test folder, as with the save paths.
+
 ## Open decisions (ask before assuming)
 
 - Target platforms: desktop, web, mobile?

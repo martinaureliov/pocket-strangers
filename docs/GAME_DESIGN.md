@@ -51,5 +51,7 @@
 
 ## UI
 
-Planned screens: title, episode select, dialogue box, choice menu, backlog/history, save/load (Auto + 9 slots), settings
-(text speed, auto-advance, volume), puzzle HUD.
+Built: title with episode select, dialogue box, choice menu, backlog/history, save/load (Auto + 9 slots), settings
+(text speed, auto-advance, volumes, fullscreen).
+
+Planned: puzzle HUD.

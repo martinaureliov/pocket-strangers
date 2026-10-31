@@ -26,6 +26,9 @@ Where things stand (done in a cloud session, all pushed to main):
 - Multiple save slots are done: GameState v3 saves, one crash-safe file per slot in user://saves/ (Auto plus 9
   manual slots), shared read lines in user://system.json, and a slot screen (scenes/ui/save_load_screen/) used by
   the VN player and the title screen. The old user://save.json moves into slot 1 on first launch.
+- A settings screen is done (scenes/ui/settings_screen/, opened from the title screen and the VN quick menu): text
+  speed, auto speed, volumes and fullscreen, kept by the Settings autoload in user://settings.cfg. Audio buses
+  (Master, Music, SFX, Ambience, Voice) are set up in default_bus_layout.tres; there's no music or sound yet.
 - Godot 4.7.2 is now installed locally at C:\Users\marti\Godot\4.7.2. All headless tests pass locally and in CI.
   CI shows Godot error lines as a GitHub annotation.
 
@@ -39,8 +42,8 @@ First, set up local verification:
 5. Launch the game (godot --path .) so I can playtest Episode 1, then ask me for feedback on how it feels:
    text speed, fades, click response, the layout.
 
-Then fix whatever the playtest shows. After that the open options are: a settings screen (text speed, auto speed,
-volume), music and sound support, or starting the real Episode 1 story.
+Then fix whatever the playtest shows. After that the open options are: music and sound support, or starting the
+real Episode 1 story.
 Ask me which one before starting.
 
 Keep in mind:
