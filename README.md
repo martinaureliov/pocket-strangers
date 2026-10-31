@@ -51,3 +51,4 @@ CI (`.github/workflows/ci.yml`) runs both on every push and pull request.
 
 - [Game design document](docs/GAME_DESIGN.md)
 - [Agent / contributor guide](CLAUDE.md)
+- [Prompt for continuing in a local Claude Code session (Windows)](docs/LOCAL_SESSION_PROMPT.md)
