@@ -50,11 +50,11 @@ func _build_ui() -> void:
 	column.add_child(dials)
 	for i in _lock.dial_count():
 		var dial := VBoxContainer.new()
-		dial.add_child(_button("▲", _lock.rotate.bind(i, 1)))
+		dial.add_child(_button("▲", _rotate_dial.bind(i, 1)))
 		var digit := _label("0", 72)
 		_digit_labels.append(digit)
 		dial.add_child(digit)
-		dial.add_child(_button("▼", _lock.rotate.bind(i, -1)))
+		dial.add_child(_button("▼", _rotate_dial.bind(i, -1)))
 		dials.add_child(dial)
 
 	_feedback = _label("", 26)
@@ -66,7 +66,7 @@ func _build_ui() -> void:
 	column.add_child(actions)
 	var open_button := _button("Open", _on_open_pressed)
 	actions.add_child(open_button)
-	actions.add_child(_button("Give up", finish.bind(false)))
+	actions.add_child(_button("Give up", _on_give_up_pressed))
 	open_button.grab_focus.call_deferred()
 
 
@@ -76,11 +76,23 @@ func _refresh() -> void:
 	_feedback.text = ""
 
 
+func _rotate_dial(index: int, step: int) -> void:
+	Audio.play_sfx("dial_tick")
+	_lock.rotate(index, step)
+
+
 func _on_open_pressed() -> void:
 	if _lock.try_open():
+		Audio.play_sfx("lock_open")  # Keeps playing on the Audio autoload after the puzzle closes.
 		finish(true)
 	else:
+		Audio.play_sfx("lock_fail")
 		_feedback.text = "It doesn't budge."
+
+
+func _on_give_up_pressed() -> void:
+	Audio.play_sfx("ui_back")
+	finish(false)
 
 
 func _label(text: String, size: int) -> Label:

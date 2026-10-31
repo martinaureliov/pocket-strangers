@@ -28,7 +28,11 @@ Where things stand (done in a cloud session, all pushed to main):
   the VN player and the title screen. The old user://save.json moves into slot 1 on first launch.
 - A settings screen is done (scenes/ui/settings_screen/, opened from the title screen and the VN quick menu): text
   speed, auto speed, volumes and fullscreen, kept by the Settings autoload in user://settings.cfg. Audio buses
-  (Master, Music, SFX, Ambience, Voice) are set up in default_bus_layout.tres; there's no music or sound yet.
+  (Master, Music, SFX, Ambience, Voice) are set up in default_bus_layout.tres.
+- Music and sound support is done: the Audio autoload (scripts/autoload/audio.gd) crossfades music and ambience and
+  plays sound effects and UI sounds, and the Stage music/ambience/sfx commands drive it from dialogue (saved with the
+  stage). Music is generated with Lyria by tools/audio/generate_music.py (needs GEMINI_API_KEY, costs money: ask before
+  running it for real); sound effects come from tools/audio/synth_sfx.py and Kenney CC0 packs. See CLAUDE.md.
 - Godot 4.7.2 is now installed locally at C:\Users\marti\Godot\4.7.2. All headless tests pass locally and in CI.
   CI shows Godot error lines as a GitHub annotation.
 
@@ -42,9 +46,8 @@ First, set up local verification:
 5. Launch the game (godot --path .) so I can playtest Episode 1, then ask me for feedback on how it feels:
    text speed, fades, click response, the layout.
 
-Then fix whatever the playtest shows. After that the open options are: music and sound support, or starting the
-real Episode 1 story.
-Ask me which one before starting.
+Then fix whatever the playtest shows. After that the open option is starting the real Episode 1 story.
+Ask me before starting.
 
 Keep in mind:
 - Saves record dialogue line numbers, so editing a .dialogue file can move saved positions. This is fine for now;

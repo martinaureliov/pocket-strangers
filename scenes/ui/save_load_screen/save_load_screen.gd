@@ -44,6 +44,13 @@ func close() -> void:
 	closed.emit()
 
 
+## Back button / Esc: close with the "back" sound (owners closing it after a save stay quiet).
+func _close_with_sound() -> void:
+	if visible:
+		Audio.play_sfx("ui_back")
+	close()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
@@ -52,7 +59,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _confirm.visible:
 			_cancel_confirm()
 		else:
-			close()
+			_close_with_sound()
 
 
 func _refresh() -> void:
@@ -91,6 +98,7 @@ func _slot_button(slot: String, info: Dictionary) -> Button:
 
 
 func _on_slot_pressed(slot: String, used: bool) -> void:
+	Audio.play_sfx("ui_click")
 	if mode == Mode.SAVE and used:
 		_pending_slot = slot
 		_confirm_label.text = "Save over slot %s?" % slot
@@ -101,11 +109,13 @@ func _on_slot_pressed(slot: String, used: bool) -> void:
 
 
 func _on_confirm_yes() -> void:
+	Audio.play_sfx("ui_click")
 	_confirm.hide()
 	slot_chosen.emit(_pending_slot)
 
 
 func _cancel_confirm() -> void:
+	Audio.play_sfx("ui_back")
 	_confirm.hide()
 	_refresh()
 
@@ -143,7 +153,7 @@ func _build_ui() -> void:
 	_grid.add_theme_constant_override("v_separation", 16)
 	column.add_child(_grid)
 
-	_back_button = _action_button("Back", close)
+	_back_button = _action_button("Back", _close_with_sound)
 	_back_button.size_flags_horizontal = Control.SIZE_SHRINK_END
 	column.add_child(_back_button)
 

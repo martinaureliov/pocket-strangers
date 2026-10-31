@@ -7,6 +7,9 @@ extends Control
 ##   $> Stage.background("park_day")
 ##   $> Stage.show_character("stranger", "smile", "right")
 ##   $> Stage.hide_character("stranger")
+##   $> Stage.music("bus_stop_night")      (crossfades; Stage.stop_music() fades out)
+##   $> Stage.ambience("night_street")     (looping background sound; Stage.stop_ambience())
+##   $> Stage.sfx("phone_buzz")            (one-shot; skipped while fast-forwarding)
 ##   $> Stage.puzzle("res://scenes/puzzles/combination_lock/combination_lock_puzzle.tscn", "ep01_phone_unlocked")
 ## Art is found by file name (see CLAUDE.md); missing art is drawn as a labeled placeholder.
 
@@ -34,7 +37,7 @@ var auto_mode: bool = false
 var skip_mode: bool = false
 
 ## Plain-data description of what's on screen, saved with the game.
-var _stage: Dictionary = {"background": "", "characters": {}}
+var _stage: Dictionary = {"background": "", "characters": {}, "music": "", "ambience": ""}
 var _character_nodes: Dictionary = {}
 var _background_node: Control
 var _waiting_for_input: bool = false
@@ -148,6 +151,35 @@ func clear_characters() -> void:
 		hide_character(character)
 
 
+## Crossfades to the music track `track` (see Audio). The name is kept in the saved stage.
+func music(track: String, fade: float = 1.5) -> void:
+	_stage["music"] = track
+	Audio.play_music(track, fade)
+
+
+func stop_music(fade: float = 1.5) -> void:
+	_stage["music"] = ""
+	Audio.stop_music(fade)
+
+
+## Starts the looping ambience `loop_name` (see Audio). The name is kept in the saved stage.
+func ambience(loop_name: String, fade: float = 2.0) -> void:
+	_stage["ambience"] = loop_name
+	Audio.play_ambience(loop_name, fade)
+
+
+func stop_ambience(fade: float = 2.0) -> void:
+	_stage["ambience"] = ""
+	Audio.stop_ambience(fade)
+
+
+## Plays a one-shot sound effect. Skipped while fast-forwarding, where stings would only be noise.
+func sfx(sound: String) -> void:
+	if skip_mode:
+		return
+	Audio.play_sfx(sound)
+
+
 ## Runs a puzzle scene on top of the story and waits for it. Stores the result (true = solved)
 ## in the story flag `result_flag`, so dialogue can branch on it.
 func puzzle(scene_path: String, result_flag: String) -> bool:
@@ -186,6 +218,16 @@ func apply_stage(data: Dictionary) -> void:
 	for character: String in characters:
 		var c: Dictionary = characters[character]
 		show_character(character, c.get("expression", "neutral"), c.get("slot", "center"), c.get("pose", "default"))
+	var music_name := String(data.get("music", ""))
+	if music_name.is_empty():
+		stop_music(0.5)
+	else:
+		music(music_name, 0.5)
+	var ambience_name := String(data.get("ambience", ""))
+	if ambience_name.is_empty():
+		stop_ambience(0.5)
+	else:
+		ambience(ambience_name, 0.5)
 	skip_mode = was_skipping
 
 
@@ -265,6 +307,7 @@ func _show_choices() -> void:
 
 
 func _on_choice_pressed(response: DialogueResponse) -> void:
+	Audio.play_sfx("ui_click")
 	_clear_choices()
 	runner.choose(response)
 
@@ -284,6 +327,8 @@ func _on_ended() -> void:
 	var err := GameState.save_slot(GameState.AUTO_SLOT)  # Keep episode completion.
 	if err != OK:
 		push_error("VNPlayer: autosave failed: %s" % error_string(err))
+	stop_music(1.5)
+	stop_ambience(1.5)
 	episode_finished.emit()
 	_show_toast("End of episode")
 	await get_tree().create_timer(1.5).timeout
@@ -365,6 +410,8 @@ func _on_slot_chosen(slot: String) -> void:
 		load_game(slot)
 		return
 	var err := save_game(slot)
+	if err == OK:
+		Audio.play_sfx("save_done")
 	_save_screen.close()
 	_show_toast(("Saved to slot %s" % slot) if err == OK else "Save failed: %s" % error_string(err))
 
@@ -409,6 +456,7 @@ func _menu_button(text: String, action: Callable, toggle: bool = false) -> Butto
 	button.custom_minimum_size = Vector2(110, 48)
 	button.add_theme_font_size_override("font_size", 24)
 	button.toggle_mode = toggle
+	button.pressed.connect(Audio.play_sfx.bind("ui_click"))
 	if toggle:
 		button.toggled.connect(action)
 	else:

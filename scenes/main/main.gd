@@ -9,6 +9,7 @@ extends Control
 
 
 func _ready() -> void:
+	Audio.play_music("title")
 	var latest := GameState.latest_slot()
 	var nothing_loaded := GameState.current_episode == &"" and GameState.completed_episodes.is_empty()
 	if nothing_loaded and not latest.is_empty():
@@ -37,6 +38,7 @@ func _make_button(text: String, on_pressed: Callable) -> Button:
 	button.text = text
 	button.custom_minimum_size = Vector2(0, 56)
 	button.add_theme_font_size_override("font_size", 28)
+	button.pressed.connect(Audio.play_sfx.bind("ui_click"))
 	button.pressed.connect(on_pressed)
 	return button
 

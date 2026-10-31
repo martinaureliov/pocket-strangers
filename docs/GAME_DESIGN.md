@@ -47,7 +47,35 @@
 
 ## Visual and audio direction
 
-**TBD**: art style, palette, music mood, voice acting.
+### Visual
+
+**TBD**: art style, palette.
+
+### Audio
+
+Three sounds blended, inspired by Yooka-Laylee, Fate/stay night and NieR: Automata. The music itself is original:
+it is generated from style descriptions, never from those names.
+
+- **Light and puzzle moments:** a playful, bouncy cartoon orchestra (marimba, pizzicato, tuba, whistling).
+- **Tension and reveals:** dramatic visual-novel orchestra with choir.
+- **Title and night scenes:** melancholic piano and strings with wordless vocals.
+
+Tracks (`tools/audio/music_tracks.json`):
+
+| Name | Use |
+|---|---|
+| `title` | Title theme. Piano, strings, distant wordless vocal |
+| `bus_stop_night` | Quiet background for dialogue at night. Felt and electric piano, pads |
+| `mystery` | Tense underscore for reveals. Staccato strings, brass, timpani, dark choir |
+| `puzzle` | Light, curious puzzle music. Pizzicato, marimba, clarinet |
+| `playful` | Bouncy, goofy adventure tune. Marimba, tuba, whistling |
+| `quiet_memory` | Sad, intimate confession scenes. Piano, cello, soft humming |
+| `sting_reveal` | Short orchestral hit for a shocking reveal |
+| `sting_success` | Short bright flourish for solving a puzzle |
+
+Ambience loops and sound effects (including UI sounds) are synthesized or taken from CC0 packs.
+
+Voice acting: **TBD**.
 
 ## UI
 

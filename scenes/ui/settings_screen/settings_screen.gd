@@ -10,6 +10,8 @@ const LABEL_WIDTH := 360.0
 const CONTROL_WIDTH := 560.0
 const VALUE_WIDTH := 140.0
 const SLIDER_HEIGHT := 40.0
+## Minimum time between slider tick sounds while dragging.
+const SLIDER_SOUND_GAP_MSEC := 80
 const PREVIEW_TEXT := "This is how fast the story text will appear."
 ## Rows in display order: [setting key, label, kind].
 const ROWS: Array = [
@@ -31,6 +33,7 @@ var _preview_label: Label
 var _preview_elapsed: float = 0.0
 var _defaults_button: Button
 var _back_button: Button
+var _last_slider_sound_msec: int = -SLIDER_SOUND_GAP_MSEC
 
 
 func _ready() -> void:
@@ -46,6 +49,13 @@ func open() -> void:
 	show()
 	(controls[&"text_speed"] as Control).grab_focus()
 	_restart_preview()
+
+
+## Back button / Esc: close with the "back" sound.
+func _close_with_sound() -> void:
+	if visible:
+		Audio.play_sfx("ui_back")
+	close()
 
 
 ## Hides the screen and saves the settings.
@@ -64,7 +74,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	get_viewport().set_input_as_handled()  # Modal: nothing behind the screen reacts.
 	if event.is_action_pressed("ui_cancel"):
-		close()
+		_close_with_sound()
 
 
 func _process(delta: float) -> void:
@@ -111,6 +121,10 @@ func _sync_controls() -> void:
 func _on_slider_changed(value: float, key: StringName) -> void:
 	Settings.set_value(key, value)
 	_update_value_text(key)
+	var now := Time.get_ticks_msec()
+	if now - _last_slider_sound_msec >= SLIDER_SOUND_GAP_MSEC:
+		_last_slider_sound_msec = now
+		Audio.play_sfx("ui_toggle")
 	if key == &"text_speed":
 		_restart_preview()
 
@@ -118,9 +132,11 @@ func _on_slider_changed(value: float, key: StringName) -> void:
 func _on_toggled(pressed: bool, key: StringName) -> void:
 	Settings.set_value(key, pressed)
 	_update_value_text(key)
+	Audio.play_sfx("ui_toggle")
 
 
 func _on_defaults_pressed() -> void:
+	Audio.play_sfx("ui_click")
 	Settings.reset_to_defaults()
 	_sync_controls()
 	_restart_preview()
@@ -188,7 +204,7 @@ func _build_ui() -> void:
 	_defaults_button = _action_button("Defaults", _on_defaults_pressed)
 	_defaults_button.name = "DefaultsButton"
 	actions.add_child(_defaults_button)
-	_back_button = _action_button("Back", close)
+	_back_button = _action_button("Back", _close_with_sound)
 	_back_button.name = "BackButton"
 	actions.add_child(_back_button)
 

@@ -29,15 +29,32 @@ scenes/main/     boot / title scene
 scenes/vn/       VN player: background, characters, text box, choices, backlog, auto/skip, save/load
 scenes/ui/       other shared UI: save_load_screen/ (slot list), settings_screen/
 scenes/puzzles/  puzzle scenes (extend Puzzle)
-scripts/autoload/ GameState (current episode, story flags, save/load), Settings (player preferences)
+scripts/autoload/ GameState (current episode, story flags, save/load), Settings (player preferences), Audio (music, ambience, sfx)
 scripts/data/    Resource classes (Episode, …)
 scripts/vn/      StoryRunner: steps through dialogue without UI
 scripts/puzzles/ puzzle rules (testable, no UI)
 addons/          third-party Godot plugins (Dialogue Manager 4)
 tests/           headless GDScript tests
+tools/audio/     music and sound effect generators (music_tracks.json is the track list)
 docs/            game design docs
 .claude/skills/  agent skills for game design and development
 ```
+
+## Regenerating audio
+
+Music comes from Google's Lyria models through the Gemini API; sound effects are synthesized locally or taken from
+Kenney's CC0 packs. Install the requirements and set `GEMINI_API_KEY` (paid tier; a full track costs about $0.08):
+
+```bash
+pip install -r tools/audio/requirements.txt
+python tools/audio/generate_music.py [--dry-run] [names] [--force]
+python tools/audio/synth_sfx.py
+```
+
+`--dry-run` shows what would be generated and what it would cost. Names limit the run to some tracks; `--force`
+regenerates tracks that already exist; `--reprocess` redoes the looping and loudness on the saved raw downloads in
+`build/audio_raw/` without calling the API. The tool keeps a cost ledger in `tools/audio/generation_log.json` and
+stops at its budget cap. Output goes to `assets/audio/`, credits are in each folder's `CREDITS.md`.
 
 ## Tests
 

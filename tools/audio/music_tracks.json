@@ -1,0 +1,61 @@
+{
+  "_comment": "Music for tools/audio/generate_music.py. Each entry becomes assets/audio/music/mus_<name>.ogg (kind 'track') or assets/audio/sfx/sfx_<name>.ogg (kind 'sting'). Prompts describe style in musical terms only: no game, composer or artist names (Lyria blocks them, and the goal is original music in a similar spirit). Style references: playful 3D-platformer orchestra (light/puzzle), dramatic anime-VN orchestra with choir (tension), melancholic piano + strings with wordless vocals (title/night).",
+  "tracks": [
+    {
+      "name": "title",
+      "kind": "track",
+      "model": "lyria-3.5",
+      "loop": true,
+      "prompt": "Melancholic, ethereal instrumental title theme. Opens with solo piano, then soft strings and a distant airy choir singing open vowels only, no words. Bittersweet, nostalgic, wistful, slightly mysterious. 80 BPM, D minor. Gradual swell in the middle, then settles back to the opening piano so it can loop. About 2 minutes."
+    },
+    {
+      "name": "bus_stop_night",
+      "kind": "track",
+      "model": "lyria-3.5",
+      "loop": true,
+      "prompt": "Quiet late-night background music for dialogue at an empty bus stop. Lonely felt piano and warm electric piano, soft analog pads, faint distant synth bells, gentle tape hiss. Calm but subtly uneasy. 70 BPM, E minor. Instrumental, no vocals. Sparse and steady, no big climax, stays in the background under reading. About 2 minutes, loopable."
+    },
+    {
+      "name": "mystery",
+      "kind": "track",
+      "model": "lyria-3.5",
+      "loop": true,
+      "prompt": "Tense mystery underscore for a dramatic reveal in a visual novel. Driving staccato string ostinato, low brass swells, pulsing timpani, urgent piano octaves, cinematic orchestral, with a dark wordless choir rising in the second half (sung vowels only, no lyrics). 120 BPM, C minor. Keeps the tension without resolving. About 90 seconds, loopable."
+    },
+    {
+      "name": "puzzle",
+      "kind": "track",
+      "model": "lyria-3.5",
+      "loop": true,
+      "prompt": "Thoughtful, light puzzle-solving music. Plucky pizzicato strings, marimba, soft clarinet melody, ticking woodblock, a little celesta. Curious and clever, gently mischievous. 100 BPM, F major with playful chromatic turns. Instrumental, no vocals. Stays in the background while the player thinks. About 90 seconds, loopable."
+    },
+    {
+      "name": "playful",
+      "kind": "track",
+      "model": "lyria-3.5",
+      "loop": true,
+      "prompt": "Bouncy, cheerful adventure tune with a cartoonish orchestra. Bright marimba and xylophone lead, oom-pah tuba bass, pizzicato strings, a whistled melody, punchy brass stabs, light swing feel. 130 BPM, G major. Instrumental, no vocals. Upbeat and goofy but warm. About 90 seconds, loopable."
+    },
+    {
+      "name": "quiet_memory",
+      "kind": "track",
+      "model": "lyria-3.5",
+      "loop": true,
+      "prompt": "Gentle, sad, intimate piece for a quiet confession scene. Slow piano with a solo cello, soft string pad, and a soft wordless humming voice in places, no lyrics. 66 BPM, A minor. Emotional but restrained. About 2 minutes, loopable."
+    },
+    {
+      "name": "sting_reveal",
+      "kind": "sting",
+      "model": "lyria-3-clip-preview",
+      "loop": false,
+      "prompt": "A single short dramatic orchestral sting for a shocking reveal: sudden full orchestra hit with timpani and a dark choir chord (vowels only), lasting about 3 seconds, then a long fading reverb tail into silence. Nothing else after it."
+    },
+    {
+      "name": "sting_success",
+      "kind": "sting",
+      "model": "lyria-3-clip-preview",
+      "loop": false,
+      "prompt": "A single short bright success flourish for solving a puzzle: quick rising marimba and pizzicato run ending on a cheerful major chord with a glockenspiel sparkle, about 2 seconds, then silence. Nothing else after it."
+    }
+  ]
+}

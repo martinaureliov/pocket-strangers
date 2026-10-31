@@ -1,0 +1,202 @@
+{
+  "budget_usd": 2.0,
+  "entries": [
+    {
+      "time": "2026-10-31T14:55:10-05:00",
+      "track": "sting_success",
+      "model": "lyria-3-clip-preview",
+      "cost_usd": 0.04,
+      "success": false,
+      "status": "error",
+      "output_duration_s": null,
+      "error": "BadRequestError: Error code: 400 - {'error': {'message': 'The legacy Interactions API schema is no longer supported. Please upgrade your google-genai Python SDK to version >= 2.0.0 (e.g., run pip install -U google-genai) to use the Interactions API. For details and migration examples, see: https://ai.google.dev/gemini-api/docs/interactions-breaking-changes-may-2026', 'code': 'invalid_request'}}"
+    },
+    {
+      "time": "2026-10-31T14:55:37-05:00",
+      "track": "sting_success",
+      "model": "lyria-3-clip-preview",
+      "cost_usd": 0.04,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 30.2,
+      "output_text_chars": 14,
+      "raw_file": "build/audio_raw/sting_success.mp3",
+      "output_file": "assets/audio/sfx/sfx_sting_success.ogg",
+      "notes": "2.1 s; RMS -18.0 dBFS; peak -2.09 dBFS; one-shot sting, cut at level dip near 2.1 s (no silent tail in clip)",
+      "measure": {
+        "duration_s": 2.1,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -2.09,
+        "bytes": 55279
+      }
+    },
+    {
+      "time": "2026-10-31T14:56:10-05:00",
+      "track": "title",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": false,
+      "status": "error",
+      "output_duration_s": null,
+      "error": "BadRequestError: Error code: 400 - {'error': {'message': \"Input blocked: The prompt could not be submitted. The prompt contains sensitive words that violate Google's [Generative AI Prohibited Use policy](https://policies.google.com/terms/generative-ai/use-policy). Try rephrasing the prompt.\", 'code': 'prohibited_content'}}"
+    },
+    {
+      "time": "2026-10-31T14:56:19-05:00",
+      "track": "bus_stop_night",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 118.41,
+      "output_text_chars": 20,
+      "raw_file": "build/audio_raw/bus_stop_night.mp3",
+      "output_file": "assets/audio/music/mus_bus_stop_night.ogg",
+      "notes": "112.85 s; RMS -18.0 dBFS; peak -3.37 dBFS; loop crossfade 2.5 s; composed ending cut (0.5 s)",
+      "measure": {
+        "duration_s": 112.85,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -3.37,
+        "bytes": 2485537
+      }
+    },
+    {
+      "time": "2026-10-31T14:56:49-05:00",
+      "track": "mystery",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 85.76,
+      "output_text_chars": 27,
+      "raw_file": "build/audio_raw/mystery.mp3",
+      "output_file": "assets/audio/music/mus_mystery.ogg",
+      "notes": "79.25 s; RMS -18.0 dBFS; peak -3.51 dBFS; loop crossfade 2.5 s; composed ending cut (1.2 s)",
+      "measure": {
+        "duration_s": 79.25,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -3.51,
+        "bytes": 1714300
+      }
+    },
+    {
+      "time": "2026-10-31T14:57:14-05:00",
+      "track": "puzzle",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 86.78,
+      "output_text_chars": 41,
+      "raw_file": "build/audio_raw/puzzle.mp3",
+      "output_file": "assets/audio/music/mus_puzzle.ogg",
+      "notes": "80.74 s; RMS -18.0 dBFS; peak -3.87 dBFS; loop crossfade 2.5 s; composed ending cut (1.0 s)",
+      "measure": {
+        "duration_s": 80.74,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -3.87,
+        "bytes": 1665071
+      }
+    },
+    {
+      "time": "2026-10-31T14:57:34-05:00",
+      "track": "playful",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 88.58,
+      "output_text_chars": 48,
+      "raw_file": "build/audio_raw/playful.mp3",
+      "output_file": "assets/audio/music/mus_playful.ogg",
+      "notes": "81.0 s; RMS -18.0 dBFS; peak -2.71 dBFS; loop crossfade 2.5 s; composed ending cut (2.0 s)",
+      "measure": {
+        "duration_s": 81.0,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -2.71,
+        "bytes": 1821686
+      }
+    },
+    {
+      "time": "2026-10-31T14:58:02-05:00",
+      "track": "quiet_memory",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 117.52,
+      "output_text_chars": 27,
+      "raw_file": "build/audio_raw/quiet_memory.mp3",
+      "output_file": "assets/audio/music/mus_quiet_memory.ogg",
+      "notes": "109.0 s; RMS -18.0 dBFS; peak -3.47 dBFS; loop crossfade 2.5 s; composed ending cut (4.2 s)",
+      "measure": {
+        "duration_s": 109.0,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -3.47,
+        "bytes": 2166529
+      }
+    },
+    {
+      "time": "2026-10-31T14:58:39-05:00",
+      "track": "sting_reveal",
+      "model": "lyria-3-clip-preview",
+      "cost_usd": 0.04,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 27.59,
+      "output_text_chars": 19,
+      "raw_file": "build/audio_raw/sting_reveal.mp3",
+      "output_file": "assets/audio/sfx/sfx_sting_reveal.ogg",
+      "notes": "3.7 s; RMS -18.0 dBFS; peak -5.55 dBFS; one-shot sting, cut at level dip near 3.7 s (no silent tail in clip)",
+      "measure": {
+        "duration_s": 3.7,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -5.55,
+        "bytes": 90803
+      }
+    },
+    {
+      "time": "2026-10-31T15:01:12-05:00",
+      "track": "title",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 121.16,
+      "output_text_chars": 34,
+      "raw_file": "build/audio_raw/title.mp3",
+      "output_file": "assets/audio/music/mus_title.ogg",
+      "notes": "112.39 s; RMS -18.0 dBFS; peak -3.74 dBFS; loop crossfade 2.5 s; composed ending cut (3.8 s)",
+      "measure": {
+        "duration_s": 112.39,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -3.74,
+        "bytes": 2414185
+      }
+    }
+  ],
+  "total_usd": 0.68
+}

@@ -50,6 +50,10 @@ func _initialize() -> void:
 			push_error("FAIL %s: did not finish (runtime error?)" % test_name)
 	if autoload_settings != null:
 		autoload_settings.reset_to_defaults()  # Leave the audio buses at their defaults.
+	var autoload_audio := root.get_node_or_null("Audio")
+	if autoload_audio != null:
+		autoload_audio.stop_all()  # Nothing lingers after the run.
+		await create_timer(0.2).timeout  # The audio thread frees stopped playbacks a moment later.
 	_remove_dir(TEST_DIR)
 	print("Results: %d passed, %d failed" % [passed, failed])
 	quit(1 if failed > 0 else 0)
@@ -135,6 +139,21 @@ class FakeStage extends Node:
 
 	func clear_characters() -> void:
 		calls.append("clear")
+
+	func music(track: String, _fade: float = 1.5) -> void:
+		calls.append("music:" + track)
+
+	func stop_music(_fade: float = 1.5) -> void:
+		calls.append("stop_music")
+
+	func ambience(loop_name: String, _fade: float = 2.0) -> void:
+		calls.append("ambience:" + loop_name)
+
+	func stop_ambience(_fade: float = 2.0) -> void:
+		calls.append("stop_ambience")
+
+	func sfx(sound: String) -> void:
+		calls.append("sfx:" + sound)
 
 	func puzzle(_scene_path: String, result_flag: String) -> bool:
 		calls.append("puzzle:" + result_flag)
@@ -527,10 +546,22 @@ func test_episode1_claim_and_solve() -> bool:
 	check(stage.calls.has("background:bus_stop_night"), "background shown")
 	check(stage.calls.has("show:stranger:smile:right"), "expression changed after choice")
 	check(stage.calls.has("puzzle:ep01_phone_unlocked"), "puzzle ran")
+	_check_ep1_common_audio(stage, "claim+solve")
+	check(stage.calls.has("sfx:sting_reveal"), "claim+solve: reveal sting plays")
+	check(stage.calls.has("music:mystery"), "claim+solve: mystery music plays")
 	var texts := runner.history.map(func(e: Dictionary) -> String: return e.text)
 	check(texts.has("So it really is yours. What does it say?"), "line reacts to the earlier choice")
 	_story_teardown(stage)
 	return true
+
+
+## Audio cues every run of episode 1 makes, whichever way the choices go.
+func _check_ep1_common_audio(stage: FakeStage, label: String) -> void:
+	check(stage.calls.has("music:bus_stop_night"), "%s: bus stop music starts" % label)
+	check(stage.calls.has("ambience:night_street"), "%s: night street ambience starts" % label)
+	check(stage.calls.has("sfx:phone_buzz"), "%s: phone buzz plays" % label)
+	check(stage.calls.has("music:puzzle"), "%s: puzzle music plays" % label)
+	check(stage.calls.has("sfx:bus_arrive"), "%s: bus arrival sound plays" % label)
 
 
 func test_episode1_deny_and_fail() -> bool:
@@ -547,6 +578,10 @@ func test_episode1_deny_and_fail() -> bool:
 	check_eq(game_state.get_flag(&"ep01_phone_unlocked"), false, "failed puzzle stored")
 	var texts := runner.history.map(func(e: Dictionary) -> String: return e.text)
 	check(texts.has("The phone stays dark."), "failed-puzzle branch taken")
+	_check_ep1_common_audio(stage, "deny+fail")
+	var puzzle_index := stage.calls.find("puzzle:ep01_phone_unlocked")
+	check(puzzle_index != -1, "deny+fail: puzzle ran")
+	check(stage.calls.find("music:bus_stop_night", puzzle_index + 1) != -1, "deny+fail: bus stop music returns after the puzzle")
 	_story_teardown(stage)
 	return true
 
@@ -782,6 +817,201 @@ func test_title_screen_has_settings_button() -> bool:
 		check(false, "title episode list has children")
 	title.queue_free()
 	await process_frame
+	return true
+
+
+func test_episode1_scene_sets_audio_stage() -> bool:
+	var game_state := root.get_node_or_null("GameState")
+	var audio := root.get_node_or_null("Audio")
+	if game_state == null or audio == null:
+		check(false, "GameState and Audio autoloads are available")
+		return true
+	game_state.reset()
+	audio.stop_all()
+	var player := (load("res://episodes/ep01/ep01.tscn") as PackedScene).instantiate()
+	root.add_child(player)
+	var frames := 0
+	while player.runner.line == null and frames < 120:
+		frames += 1
+		await process_frame
+	check(player.runner.line != null, "VN player shows a line")
+	check_eq(player._stage.get("music"), "bus_stop_night", "stage records the music")
+	check_eq(player._stage.get("ambience"), "night_street", "stage records the ambience")
+	check_eq(audio.current_music, "bus_stop_night", "Audio plays the stage music")
+	check_eq(audio.current_ambience, "night_street", "Audio plays the stage ambience")
+
+	# Restoring a stage without audio stops it.
+	player.apply_stage({"background": "x", "characters": {}, "music": "", "ambience": ""})
+	check_eq(audio.current_music, "", "apply_stage with empty music stops it")
+	check_eq(audio.current_ambience, "", "apply_stage with empty ambience stops it")
+
+	# A stage dict with the names starts them again.
+	player.apply_stage({"background": "x", "characters": {}, "music": "puzzle", "ambience": "night_street"})
+	check_eq(audio.current_music, "puzzle", "apply_stage restores the music")
+	check_eq(audio.current_ambience, "night_street", "apply_stage restores the ambience")
+	check_eq(player._stage.get("music"), "puzzle", "restored music is recorded in the stage")
+
+	# An older save has no audio keys: that means silence.
+	player.apply_stage({"background": "x", "characters": {}})
+	check_eq(audio.current_music, "", "apply_stage without a music key stops it")
+	check_eq(audio.current_ambience, "", "apply_stage without an ambience key stops it")
+	check_eq(player._stage.get("music", ""), "", "stage music cleared")
+
+	player.queue_free()
+	await process_frame
+	audio.stop_all()
+	game_state.reset()
+	return true
+
+
+func test_title_screen_plays_title_music() -> bool:
+	var audio := root.get_node_or_null("Audio")
+	if audio == null:
+		check(false, "Audio autoload is available")
+		return true
+	audio.stop_all()
+	var title := (load("res://scenes/main/main.tscn") as PackedScene).instantiate()
+	root.add_child(title)
+	await process_frame
+	check_eq(audio.current_music, "title", "title screen plays the title music")
+	title.queue_free()
+	await process_frame
+	audio.stop_all()
+	return true
+
+
+# --- Audio ----------------------------------------------------------------------
+
+const MISSING_SOUND := "zz_test_missing_sound"
+
+## The AudioStreamPlayers the Audio autoload owns, in creation order.
+func _audio_players(audio: Node) -> Array[AudioStreamPlayer]:
+	var players: Array[AudioStreamPlayer] = []
+	for child: Node in audio.get_children():
+		if child is AudioStreamPlayer:
+			players.append(child)
+	return players
+
+
+func _playing_players(audio: Node, bus_name: StringName) -> Array[AudioStreamPlayer]:
+	var result: Array[AudioStreamPlayer] = []
+	for player in _audio_players(audio):
+		if player.bus == bus_name and player.playing:
+			result.append(player)
+	return result
+
+
+func _stream_loops(stream: AudioStream) -> bool:
+	if stream is AudioStreamOggVorbis:
+		return (stream as AudioStreamOggVorbis).loop
+	if stream is AudioStreamMP3:
+		return (stream as AudioStreamMP3).loop
+	if stream is AudioStreamWAV:
+		return (stream as AudioStreamWAV).loop_mode != AudioStreamWAV.LOOP_DISABLED
+	return false
+
+
+func _audio_file_exists(base: String) -> bool:
+	for ext in ["ogg", "mp3", "wav"]:
+		if ResourceLoader.exists("%s.%s" % [base, ext]):
+			return true
+	return false
+
+
+func test_audio_music_and_ambience_state() -> bool:
+	var audio := root.get_node_or_null("Audio")
+	check(audio != null, "Audio autoload is available")
+	if audio == null:
+		return true
+	audio.stop_all()
+	check_eq(audio.current_music, "", "no music at first")
+	check_eq(audio.current_ambience, "", "no ambience at first")
+
+	audio.play_music(MISSING_SOUND, 0.0)
+	check_eq(audio.current_music, MISSING_SOUND, "play_music sets current_music")
+	audio.play_music(MISSING_SOUND, 0.0)
+	check_eq(audio.current_music, MISSING_SOUND, "same music again is a no-op")
+	audio.play_music(MISSING_SOUND + "_2", 0.0)
+	check_eq(audio.current_music, MISSING_SOUND + "_2", "another track replaces current_music")
+	audio.stop_music(0.0)
+	check_eq(audio.current_music, "", "stop_music clears current_music")
+	audio.stop_music(0.0)
+	check_eq(audio.current_music, "", "stopping twice is fine")
+
+	audio.play_ambience(MISSING_SOUND, 0.0)
+	check_eq(audio.current_ambience, MISSING_SOUND, "play_ambience sets current_ambience")
+	audio.play_ambience(MISSING_SOUND, 0.0)
+	check_eq(audio.current_ambience, MISSING_SOUND, "same ambience again is a no-op")
+	check_eq(audio.current_music, "", "ambience leaves music alone")
+	audio.stop_ambience(0.0)
+	check_eq(audio.current_ambience, "", "stop_ambience clears current_ambience")
+
+	audio.play_music(MISSING_SOUND, 0.0)
+	audio.play_ambience(MISSING_SOUND, 0.0)
+	audio.stop_all()
+	check_eq(audio.current_music, "", "stop_all clears music")
+	check_eq(audio.current_ambience, "", "stop_all clears ambience")
+	return true
+
+
+func test_audio_missing_files() -> bool:
+	var audio := root.get_node_or_null("Audio")
+	if audio == null:
+		check(false, "Audio autoload is available")
+		return true
+	check_eq(audio.play_sfx(MISSING_SOUND), false, "play_sfx of a missing sound returns false")
+	check_eq(audio.play_sfx(MISSING_SOUND), false, "play_sfx of a missing sound twice still returns false")
+	check_eq(audio.play_sfx(""), false, "play_sfx with an empty name returns false")
+	check(audio.find_stream(audio.MUSIC_PATH, MISSING_SOUND, true) == null, "find_stream: missing music is null")
+	check(audio.find_stream(audio.AMBIENCE_PATH, MISSING_SOUND, true) == null, "find_stream: missing ambience is null")
+	check(audio.find_stream(audio.SFX_PATH, MISSING_SOUND, false) == null, "find_stream: missing sfx is null")
+	check(audio.find_stream(audio.MUSIC_PATH, "", true) == null, "find_stream: empty name is null")
+	return true
+
+
+func test_audio_buses_and_players() -> bool:
+	var audio := root.get_node_or_null("Audio")
+	if audio == null:
+		check(false, "Audio autoload is available")
+		return true
+	var counts := {}
+	for player in _audio_players(audio):
+		counts[String(player.bus)] = int(counts.get(String(player.bus), 0)) + 1
+	check_eq(counts.keys().size(), 3, "players sit on exactly three buses")
+	check_eq(counts.get("Music", 0), 2, "two players on Music (for crossfading)")
+	check_eq(counts.get("Ambience", 0), 2, "two players on Ambience (for crossfading)")
+	check_eq(counts.get("SFX", 0), audio.SFX_VOICES, "SFX_VOICES players on SFX")
+	for bus_name in ["Music", "Ambience", "SFX"]:
+		check(AudioServer.get_bus_index(bus_name) != -1, "bus %s exists" % bus_name)
+	return true
+
+
+## Only checks files that exist, so the test passes before and after the audio is added.
+func test_audio_real_files_play_and_loop() -> bool:
+	var audio := root.get_node_or_null("Audio")
+	if audio == null:
+		check(false, "Audio autoload is available")
+		return true
+	audio.stop_all()
+	if _audio_file_exists("res://assets/audio/music/mus_title"):
+		audio.play_music("title", 0.0)
+		check_eq(audio.current_music, "title", "title music is current")
+		var playing_music := _playing_players(audio, &"Music")
+		check_eq(playing_music.size(), 1, "one Music player is playing")
+		for player in playing_music:
+			check(player.stream != null and _stream_loops(player.stream), "music stream loops")
+	if _audio_file_exists("res://assets/audio/ambience/amb_night_street"):
+		audio.play_ambience("night_street", 0.0)
+		var playing_ambience := _playing_players(audio, &"Ambience")
+		check_eq(playing_ambience.size(), 1, "one Ambience player is playing")
+		for player in playing_ambience:
+			check(player.stream != null and _stream_loops(player.stream), "ambience stream loops")
+	if _audio_file_exists("res://assets/audio/sfx/sfx_phone_buzz"):
+		check_eq(audio.play_sfx("phone_buzz"), true, "play_sfx finds an existing sound")
+		check_eq(_playing_players(audio, &"SFX").size(), 1, "one SFX player is playing")
+	audio.stop_all()
+	for player in _audio_players(audio):
+		check(not player.playing, "stop_all stops every player")
 	return true
 
 

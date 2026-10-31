@@ -37,9 +37,9 @@ The same applies to any addon added to `addons/` (e.g. Dialogue Manager): mentio
 - GDScript style: static typing everywhere, tabs, `snake_case` files and functions, `PascalCase` classes and nodes.
   Use `%UniqueName` for node lookups inside a scene.
 - File names: `snake_case`. Assets: `bg_<place>_<time>.png`, `chr_<name>_<pose>_<expression>.png`,
-  `cg_epXX_<moment>.png`, `mus_<mood>.ogg`, `sfx_<thing>.ogg`. The VN player finds art by these names
-  (`Stage.background("bus_stop_night")` → `assets/art/backgrounds/bg_bus_stop_night.png`; pose defaults to `default`)
-  and draws a labeled placeholder when a file is missing.
+  `cg_epXX_<moment>.png`, `mus_<mood>.ogg`, `amb_<place>.ogg`, `sfx_<thing>.ogg` (stings are `sfx_sting_<name>.ogg`). The VN player finds art by
+  these names (`Stage.background("bus_stop_night")` → `assets/art/backgrounds/bg_bus_stop_night.png`; pose defaults to
+  `default`) and draws a labeled placeholder when a file is missing.
 - Add a test in `tests/test_runner.gd` (`test_*` method returning `true`) for any non-UI logic: state, saves,
   puzzle rules. Don't use bare `assert()` in tests because it hangs the headless run.
 
@@ -73,6 +73,11 @@ Docs (match the installed version): https://github.com/nathanhoad/godot_dialogue
   - `$> Stage.hide_character("stranger")`, `$> Stage.clear_characters()`
   - `$> Stage.puzzle("res://scenes/puzzles/<name>/<name>.tscn", "ep01_<result_flag>")` waits for the puzzle and stores
     `true`/`false` in that flag. Branch on it with `if GameState.get_flag("ep01_<result_flag>") == true`.
+  - `$> Stage.music("bus_stop_night")` crossfades to a track (optional fade seconds, default 1.5; asking for the track
+    that's already playing does nothing). `$> Stage.stop_music()` fades it out.
+  - `$> Stage.ambience("night_street")` (default fade 2.0) and `$> Stage.stop_ambience()` do the same for the ambience loop.
+  - `$> Stage.sfx("phone_buzz")` plays a one-shot; it's skipped while skipping.
+  - Music and ambience are saved with the stage, so loading a save restores them.
 - **When adding a Stage command, also add it to `FakeStage` in `tests/test_runner.gd`**: Dialogue Manager asserts
   (and the headless run hangs) when a script calls a method the stage doesn't have.
 - Narration lines must not contain `: ` (Dialogue Manager reads text before it as a speaker name).
@@ -107,6 +112,24 @@ Docs (match the installed version): https://github.com/nathanhoad/godot_dialogue
 - `SettingsScreen` (`scenes/ui/settings_screen/`) is a modal like `SaveLoadScreen`. Esc or Back closes it and saves.
   The VN player's quick menu and the title screen open it.
 - Tests must not touch real settings: point `Settings.path` at the test folder, as with the save paths.
+- `Audio` (`scripts/autoload/audio.gd`, registered after `Settings`) plays everything. Music and ambience crossfade on
+  their own buses and keep playing across scenes; sound effects use a small pool of players on `SFX`. Don't add
+  `AudioStreamPlayer`s for these elsewhere; call `Audio.play_music/play_ambience/play_sfx` (or the Stage commands).
+- Sounds are found by name, like art: music `x` → `assets/audio/music/mus_x.ogg`, ambience → `assets/audio/ambience/amb_x.ogg`,
+  sfx → `assets/audio/sfx/sfx_x.ogg`. `.ogg`, `.mp3` and `.wav` are tried in that order. A missing file warns once and
+  plays nothing, so scripts can name sounds before they exist.
+- UI sounds: buttons `ui_click`, back/close `ui_back`, sliders and toggles `ui_toggle`, saving `save_done`, the lock dial
+  `dial_tick`, plus lock fail and open.
+- Music is generated with Google's Lyria models through the Gemini API by `tools/audio/generate_music.py`, from
+  `tools/audio/music_tracks.json`. It needs `GEMINI_API_KEY` in the environment and a paid tier (about $0.08 per full
+  track, $0.04 per 30 s clip), so ask before running it for real; use `--dry-run` to check. The tool keeps a cost ledger
+  in `tools/audio/generation_log.json` and has a budget cap. Raw downloads go to `build/audio_raw/` (gitignored). Loop
+  tracks get a crossfaded seam and normalized loudness. Credits and prompts are in `assets/audio/music/CREDITS.md`.
+  Generated audio carries a SynthID watermark.
+- **Prompt rule:** music prompts describe style in musical terms only (instruments, tempo, key, mood). Never name games,
+  composers or artists: Lyria blocks them, and the goal is original music.
+- Sound effects are synthesized by `tools/audio/synth_sfx.py` and/or taken from Kenney's CC0 packs (kenney.nl). Credits are in
+  `assets/audio/sfx/CREDITS.md` and `assets/audio/ambience/CREDITS.md`. Packs are downloaded to `build/` and not committed.
 
 ## Open decisions (ask before assuming)
 
