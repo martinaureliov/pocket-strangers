@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/vn/vn_player.tscn" id="1_player"]
+[ext_resource type="Resource" path="res://episodes/ep01/dialogue/ep01_placeholder.dialogue" id="2_dialogue"]
+
+[node name="Ep01" instance=ExtResource("1_player")]
+dialogue = ExtResource("2_dialogue")
+episode_id = &"ep01"

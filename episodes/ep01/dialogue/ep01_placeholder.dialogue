@@ -1,0 +1,36 @@
+# Episode 1: PLACEHOLDER script for the vertical slice. Replace with the real story.
+# It exercises every system the VN player supports: a background, a character, a choice
+# that sets a flag, a later line that reacts to that flag, a puzzle, and a branch on the result.
+
+~ start
+$> Stage.background("bus_stop_night")
+It's late. The last bus is twenty minutes away.
+$> Stage.show_character("stranger", "neutral", "right")
+Stranger: Excuse me. Is this yours?
+Stranger: It was on the bench. Some old phone.
+- Say it's yours
+	$> GameState.set_flag("ep01_claimed_phone", true)
+	You: Yeah... that's mine. Thanks.
+	$> Stage.show_character("stranger", "smile", "right")
+	Stranger: Lucky. Most people wouldn't have noticed it.
+- Say it isn't
+	$> GameState.set_flag("ep01_claimed_phone", false)
+	You: No, it's not mine.
+	Stranger: Huh. Then whose is it?
+Stranger: It's locked. There's a sticker on the back. Three numbers. 3... 1... and the last one looks like a 4.
+=> unlock
+
+~ unlock
+$> Stage.puzzle("res://scenes/puzzles/combination_lock/combination_lock_puzzle.tscn", "ep01_phone_unlocked")
+if GameState.get_flag("ep01_phone_unlocked") == true
+	The screen lights up. One unread message. "Don't trust the stranger at the bus stop."
+	if GameState.get_flag("ep01_claimed_phone") == true
+		Stranger: So it really is yours. What does it say?
+	else
+		Stranger: You got into a stranger's phone? Impressive. What does it say?
+else
+	The phone stays dark.
+	Stranger: Give it here. I'll hand it in tomorrow.
+$> Stage.hide_character("stranger")
+The bus arrives. When you look back, the bench is empty.
+=> END

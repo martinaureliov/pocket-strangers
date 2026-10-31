@@ -7,4 +7,5 @@ script = ExtResource("1_episode")
 number = 1
 id = &"ep01"
 title = "Episode 1"
-synopsis = "TBD"
+synopsis = "Placeholder for the vertical slice."
+entry_scene = "res://episodes/ep01/ep01.tscn"

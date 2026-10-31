@@ -4,7 +4,8 @@ A story-driven visual novel with a handful of puzzles, released in five episodes
 Built with **Godot 4.7** (GDScript, GL Compatibility renderer) and
 [Dialogue Manager 4](https://github.com/nathanhoad/godot_dialogue_manager) for story scripts.
 
-> Status: project setup. There's no story content yet.
+> Status: vertical slice. Episode 1 is a short placeholder scene that exercises every system
+> (dialogue, choices, flags, a puzzle, save/load); there's no real story content yet.
 
 ## Getting started
 
@@ -12,16 +13,22 @@ Built with **Godot 4.7** (GDScript, GL Compatibility renderer) and
 2. Open Godot, choose **Import**, and select this folder's `project.godot`.
 3. Press **F5** to run. The title screen lists Episodes 1–5. Each one is disabled until it has an entry scene.
 
+**Controls:** click or Space/Enter to advance; click again while text is typing to show it all. Mouse wheel up
+opens the log. The top-right buttons are Save, Load, Log, Auto, Skip (only lines you've read) and Title.
+
 ## Project layout
 
 ```
 assets/          art (backgrounds, characters, cgs, ui), audio (music, sfx, ambience, voice), fonts
 episodes/epXX/   one folder per episode: episode.tres (metadata), dialogue/*.dialogue, scenes, scripts
 scenes/main/     boot / title scene
-scenes/ui/       shared UI: dialogue box, choice menu, save/load, settings
-scenes/puzzles/  reusable puzzle scenes
+scenes/vn/       VN player: background, characters, text box, choices, backlog, auto/skip, save/load
+scenes/ui/       other shared UI (settings, menus)
+scenes/puzzles/  puzzle scenes (extend Puzzle)
 scripts/autoload/ GameState: current episode, story flags, save/load
 scripts/data/    Resource classes (Episode, …)
+scripts/vn/      StoryRunner: steps through dialogue without UI
+scripts/puzzles/ puzzle rules (testable, no UI)
 addons/          third-party Godot plugins (Dialogue Manager 4)
 tests/           headless GDScript tests
 docs/            game design docs

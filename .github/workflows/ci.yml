@@ -25,8 +25,20 @@ jobs:
 
       - name: Import project
         timeout-minutes: 5
-        run: godot --headless --path . --import
+        run: |
+          set -o pipefail
+          godot --headless --path . --import 2>&1 | tee import.log
 
       - name: Run GDScript tests
         timeout-minutes: 5
-        run: godot --headless --path . --script res://tests/test_runner.gd
+        run: |
+          set -o pipefail
+          godot --headless --path . --script res://tests/test_runner.gd 2>&1 | tee test.log
+
+      # Surface error lines as one annotation, so failures are readable without opening the logs.
+      - name: Report errors
+        if: failure()
+        run: |
+          lines=$(cat import.log test.log 2>/dev/null | grep -E "FAIL|ERROR|Error|error|Results:|at: " | head -60 || true)
+          msg=$(printf '%s' "${lines:-no error lines found}" | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=Godot errors::${msg}"
