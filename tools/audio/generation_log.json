@@ -196,7 +196,29 @@
         "peak_dbfs": -3.74,
         "bytes": 2414185
       }
+    },
+    {
+      "time": "2026-10-31T15:14:04-05:00",
+      "track": "puzzle",
+      "model": "lyria-3.5",
+      "cost_usd": 0.08,
+      "success": true,
+      "status": "ok",
+      "output_duration_s": 91.48,
+      "output_text_chars": 34,
+      "raw_file": "build/audio_raw/puzzle.mp3",
+      "output_file": "assets/audio/music/mus_puzzle.ogg",
+      "notes": "78.83 s; RMS -18.0 dBFS; peak -4.04 dBFS; loop crossfade 2.5 s; composed ending cut (7.8 s)",
+      "measure": {
+        "duration_s": 78.83,
+        "sample_rate": 44100,
+        "channels": 2,
+        "rms_dbfs": -18.0,
+        "gated_rms_dbfs": -18.0,
+        "peak_dbfs": -4.04,
+        "bytes": 1698773
+      }
     }
   ],
-  "total_usd": 0.68
+  "total_usd": 0.76
 }

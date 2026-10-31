@@ -569,6 +569,7 @@ def main(argv: list[str]) -> int:
     failures = 0
     warnings_out: list[str] = []
     RAW_DIR.mkdir(parents=True, exist_ok=True)
+    (REPO / "build" / ".gdignore").touch()  # Keep Godot from importing the raw downloads.
 
     for t, action in plan:
         name = t["name"]

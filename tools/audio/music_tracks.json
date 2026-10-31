@@ -1,5 +1,5 @@
 {
-  "_comment": "Music for tools/audio/generate_music.py. Each entry becomes assets/audio/music/mus_<name>.ogg (kind 'track') or assets/audio/sfx/sfx_<name>.ogg (kind 'sting'). Prompts describe style in musical terms only: no game, composer or artist names (Lyria blocks them, and the goal is original music in a similar spirit). Style references: playful 3D-platformer orchestra (light/puzzle), dramatic anime-VN orchestra with choir (tension), melancholic piano + strings with wordless vocals (title/night).",
+  "_comment": "Music for tools/audio/generate_music.py. Each entry becomes assets/audio/music/mus_<name>.ogg (kind 'track') or assets/audio/sfx/sfx_<name>.ogg (kind 'sting'). Prompts describe style in musical terms only: no game, composer or artist names (Lyria blocks them, and the goal is original music in a similar spirit). Style references: playful 3D-platformer orchestra (light moments), dramatic anime-VN orchestra with choir (tension), melancholic piano + strings with wordless vocals (title/night/puzzles).",
   "tracks": [
     {
       "name": "title",
@@ -27,7 +27,7 @@
       "kind": "track",
       "model": "lyria-3.5",
       "loop": true,
-      "prompt": "Thoughtful, light puzzle-solving music. Plucky pizzicato strings, marimba, soft clarinet melody, ticking woodblock, a little celesta. Curious and clever, gently mischievous. 100 BPM, F major with playful chromatic turns. Instrumental, no vocals. Stays in the background while the player thinks. About 90 seconds, loopable."
+      "prompt": "Subdued, introspective puzzle music for a quiet late-night scene. Soft felt piano playing a slow, searching motif, sparse muted low string pizzicato, a faint ticking clock-like pulse, warm dark pads, an occasional distant celesta note. Thoughtful and slightly tense, not cheerful, not playful, not bouncy. 84 BPM, D minor. Instrumental, no vocals. Low, even dynamics that stay in the background while the player concentrates. About 90 seconds, loopable."
     },
     {
       "name": "playful",

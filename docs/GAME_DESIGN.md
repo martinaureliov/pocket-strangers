@@ -56,9 +56,10 @@
 Three sounds blended, inspired by Yooka-Laylee, Fate/stay night and NieR: Automata. The music itself is original:
 it is generated from style descriptions, never from those names.
 
-- **Light and puzzle moments:** a playful, bouncy cartoon orchestra (marimba, pizzicato, tuba, whistling).
+- **Light moments:** a playful, bouncy cartoon orchestra (marimba, pizzicato, tuba, whistling), used sparingly.
 - **Tension and reveals:** dramatic visual-novel orchestra with choir.
-- **Title and night scenes:** melancholic piano and strings with wordless vocals.
+- **Title, night scenes and puzzles:** melancholic piano and strings with wordless vocals. Puzzle music stays in
+  this mood (subdued and searching, not cheerful) so it blends with the scene around it.
 
 Tracks (`tools/audio/music_tracks.json`):
 
@@ -67,7 +68,7 @@ Tracks (`tools/audio/music_tracks.json`):
 | `title` | Title theme. Piano, strings, distant wordless vocal |
 | `bus_stop_night` | Quiet background for dialogue at night. Felt and electric piano, pads |
 | `mystery` | Tense underscore for reveals. Staccato strings, brass, timpani, dark choir |
-| `puzzle` | Light, curious puzzle music. Pizzicato, marimba, clarinet |
+| `puzzle` | Subdued, searching puzzle music. Felt piano, muted low pizzicato, ticking pulse, dark pads |
 | `playful` | Bouncy, goofy adventure tune. Marimba, tuba, whistling |
 | `quiet_memory` | Sad, intimate confession scenes. Piano, cello, soft humming |
 | `sting_reveal` | Short orchestral hit for a shocking reveal |
