@@ -1,6 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scenes/main/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/ui/save_load_screen/save_load_screen.tscn" id="2_slots"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -43,3 +44,8 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(560, 0)
 layout_mode = 2
 theme_override_constants/separation = 12
+
+[node name="SaveLoadScreen" parent="." instance=ExtResource("2_slots")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1

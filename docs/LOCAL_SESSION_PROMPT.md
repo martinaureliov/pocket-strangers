@@ -21,13 +21,17 @@ Where things stand (done in a cloud session, all pushed to main):
 - Project setup, the gamedev skills, and Dialogue Manager 4.2.0 in addons/.
 - A vertical slice: StoryRunner (scripts/vn/, steps through dialogue without UI), the VNPlayer scene (scenes/vn/:
   background, characters, typewriter text box, choices, log, auto, skip-read, save/load at any line), a Puzzle
-  base class plus a combination lock (code 3-1-4), GameState v2 with crash-safe saves, and a PLACEHOLDER Episode 1
-  (episodes/ep01/) that uses every system. All art is placeholder boxes.
-- 88 headless tests pass locally and in CI. CI shows Godot error lines as a GitHub annotation.
+  base class plus a combination lock (code 3-1-4), and a PLACEHOLDER Episode 1 (episodes/ep01/) that uses every
+  system. All art is placeholder boxes.
+- Multiple save slots are done: GameState v3 saves, one crash-safe file per slot in user://saves/ (Auto plus 9
+  manual slots), shared read lines in user://system.json, and a slot screen (scenes/ui/save_load_screen/) used by
+  the VN player and the title screen. The old user://save.json moves into slot 1 on first launch.
+- Godot 4.7.2 is now installed locally at C:\Users\marti\Godot\4.7.2. All headless tests pass locally and in CI.
+  CI shows Godot error lines as a GitHub annotation.
 
 First, set up local verification:
 1. Run `git pull` and confirm we're on main at the latest commit.
-2. Ask me where my Godot 4.7.2 is installed. For terminal and headless runs, use the *_console.exe build
+2. Godot 4.7.2 is in C:\Users\marti\Godot\4.7.2 (ask me if it has moved). For terminal and headless runs, use the *_console.exe build
    (e.g. Godot_v4.7.2-stable_win64_console.exe); the plain .exe doesn't print to the terminal.
 3. Run the import, then the tests (commands are in CLAUDE.md), and send output to log files before reading it,
    because Windows shells can drop or reorder Godot's output. Report the results.
@@ -36,7 +40,7 @@ First, set up local verification:
    text speed, fades, click response, the layout.
 
 Then fix whatever the playtest shows. After that the open options are: a settings screen (text speed, auto speed,
-volume), music and sound support, multiple save slots, or starting the real Episode 1 story.
+volume), music and sound support, or starting the real Episode 1 story.
 Ask me which one before starting.
 
 Keep in mind:

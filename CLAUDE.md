@@ -78,10 +78,20 @@ Docs (match the installed version): https://github.com/nathanhoad/godot_dialogue
 - Narration lines must not contain `: ` (Dialogue Manager reads text before it as a speaker name).
 - Puzzles: scene root extends `Puzzle` (`scenes/puzzles/puzzle.gd`) and calls `finish(solved)` once. Put the rules in a
   UI-free `RefCounted` class in `scripts/puzzles/` with tests (see `CombinationLock`).
-- Saves: one slot at `user://save.json` (crash-safe, with `.bak`). A save stores the dialogue line id, which is the
-  line number, so editing a dialogue file can move or invalidate saved positions (an unknown id restarts the file).
-  Before release, switch to static line IDs or save only at cue boundaries. Bump `SAVE_VERSION` and extend
-  `GameState.migrate()` whenever the save format changes.
+- Saves: one file per slot in `user://saves/` (`slot_auto.json`, `slot_1.json` to `slot_9.json`), each crash-safe
+  with a `.bak`. The Auto slot is written at the end of each episode and the player can't save over it; there are
+  9 manual slots. Slot API is in `GameState` (`save_slot`, `load_slot`, `slot_info`, `latest_slot`).
+  `SaveLoadScreen` (`scenes/ui/save_load_screen/`) is the slot list. It only emits `slot_chosen`; the owner
+  (`VNPlayer`, the title screen) does the save or load.
+- Read lines (`seen_lines`, used by Skip) are shared by all slots and live in `user://system.json`. They're saved
+  with every save, when leaving the VN scene, and when the window closes.
+- The old single `user://save.json` is moved into slot 1 on first launch, if slot 1 is empty.
+- Tests must not touch real saves: the test runner points `GameState.save_dir` and `GameState.system_path` at a
+  test folder. Do the same in any new test that saves or loads.
+- A save stores the dialogue line id, which is the line number, so editing a dialogue file can move or invalidate
+  saved positions (an unknown id restarts the file). Before release, switch to static line IDs or save only at cue
+  boundaries. The save format is v3 (adds `meta`: `saved_at` and a preview text for the slot list). Bump
+  `SAVE_VERSION` and extend `GameState.migrate()` whenever the save format changes.
 
 ## Open decisions (ask before assuming)
 

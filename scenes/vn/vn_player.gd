@@ -57,6 +57,7 @@ var _toast_tween: Tween
 @onready var _puzzle_layer: Control = %PuzzleLayer
 @onready var _backlog: PanelContainer = %Backlog
 @onready var _toast: Label = %Toast
+@onready var _save_screen: SaveLoadScreen = %SaveLoadScreen
 
 
 func _ready() -> void:
@@ -64,6 +65,8 @@ func _ready() -> void:
 	runner.state = GameState
 	runner.line_changed.connect(_on_line_changed)
 	runner.ended.connect(_on_ended)
+	_save_screen.slot_chosen.connect(_on_slot_chosen)
+	_save_screen.closed.connect(get_viewport().gui_release_focus)  # Keep Space/Enter for advancing.
 	_build_quick_menu()
 	_build_backlog()
 	_dialogue_box.hide()
@@ -82,6 +85,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	DialogueManager.unregister_state_context("Stage")
+	GameState.save_system()  # Keep read lines even if the player never saves.
 
 
 #region Stage commands (called from dialogue as Stage.<name>)
@@ -233,7 +237,7 @@ func _schedule_auto_advance(serial: int) -> void:
 	if delay < 0.0:
 		return
 	await get_tree().create_timer(delay).timeout
-	if serial == _line_serial and _waiting_for_input and not _backlog.visible:
+	if serial == _line_serial and _waiting_for_input and not _overlay_open():
 		_advance()
 
 
@@ -273,7 +277,7 @@ func _on_ended() -> void:
 	if episode_id != &"":
 		GameState.complete_episode(episode_id)
 	GameState.scene_state = {}
-	var err := GameState.save_game()  # Keep episode completion.
+	var err := GameState.save_slot(GameState.AUTO_SLOT)  # Keep episode completion.
 	if err != OK:
 		push_error("VNPlayer: autosave failed: %s" % error_string(err))
 	episode_finished.emit()
@@ -287,6 +291,8 @@ func _on_ended() -> void:
 #region Input
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _save_screen.visible:
+		return
 	if _backlog.visible:
 		if event.is_action_pressed("ui_cancel"):
 			get_viewport().set_input_as_handled()
@@ -313,32 +319,50 @@ func _unhandled_input(event: InputEvent) -> void:
 
 #region Save / load
 
-func save_game() -> void:
-	if _in_puzzle or runner.is_busy() or runner.line == null:
-		_show_toast("Can't save right now")
-		return
+func can_save() -> bool:
+	return not _in_puzzle and not runner.is_busy() and runner.line != null
+
+
+func save_game(slot: String) -> Error:
+	if not can_save():
+		return ERR_BUSY
 	GameState.scene_state = {
 		"episode": String(episode_id),
 		"story": runner.snapshot(),
 		"stage": _stage.duplicate(true),
 	}
-	var err := GameState.save_game()
-	_show_toast("Saved" if err == OK else "Save failed: %s" % error_string(err))
+	return GameState.save_slot(slot)
 
 
-func load_game() -> void:
-	if not GameState.has_save():
-		_show_toast("No save yet")
-		return
-	var err := GameState.load_game()
+func load_game(slot: String) -> void:
+	var err := GameState.load_slot(slot)
 	if err != OK:
 		_show_toast("Load failed: %s" % error_string(err))
 		return
-	var episode := GameState.get_episode(StringName(GameState.scene_state.get("episode", "")))
-	if episode == null or not episode.is_playable():
-		get_tree().change_scene_to_file(TITLE_SCENE)
+	var path := GameState.loaded_scene_path()
+	get_tree().change_scene_to_file(path if not path.is_empty() else TITLE_SCENE)
+
+
+func _open_save_screen() -> void:
+	if not can_save():
+		_show_toast("Can't save right now")
 		return
-	get_tree().change_scene_to_file(episode.entry_scene)
+	_set_skip(false)
+	_save_screen.open(SaveLoadScreen.Mode.SAVE)
+
+
+func _open_load_screen() -> void:
+	_set_skip(false)
+	_save_screen.open(SaveLoadScreen.Mode.LOAD)
+
+
+func _on_slot_chosen(slot: String) -> void:
+	if _save_screen.mode == SaveLoadScreen.Mode.LOAD:
+		load_game(slot)
+		return
+	var err := save_game(slot)
+	_save_screen.close()
+	_show_toast(("Saved to slot %s" % slot) if err == OK else "Save failed: %s" % error_string(err))
 
 #endregion
 
@@ -346,8 +370,8 @@ func load_game() -> void:
 #region UI
 
 func _build_quick_menu() -> void:
-	_quick_menu.add_child(_menu_button("Save", save_game))
-	_quick_menu.add_child(_menu_button("Load", load_game))
+	_quick_menu.add_child(_menu_button("Save", _open_save_screen))
+	_quick_menu.add_child(_menu_button("Load", _open_load_screen))
 	_quick_menu.add_child(_menu_button("Log", _toggle_backlog))
 	_auto_button = _menu_button("Auto", _set_auto, true)
 	_quick_menu.add_child(_auto_button)
@@ -441,6 +465,10 @@ func _toggle_backlog() -> void:
 	_backlog.show()
 	await get_tree().process_frame
 	_backlog_scroll.scroll_vertical = int(_backlog_scroll.get_v_scroll_bar().max_value)
+
+
+func _overlay_open() -> bool:
+	return _backlog.visible or _save_screen.visible
 
 
 func _show_toast(text: String) -> void:

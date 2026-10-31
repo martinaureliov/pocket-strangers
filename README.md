@@ -15,6 +15,9 @@ Built with **Godot 4.7** (GDScript, GL Compatibility renderer) and
 
 **Controls:** click or Space/Enter to advance; click again while text is typing to show it all. Mouse wheel up
 opens the log. The top-right buttons are Save, Load, Log, Auto, Skip (only lines you've read) and Title.
+Save and Load open a slot screen (Auto plus 9 slots); Esc or Back closes it, and saving over a used slot asks first.
+The Auto slot is written at the end of each episode. When a save exists, the title screen has Continue (latest
+save) and Load.
 
 ## Project layout
 
@@ -23,7 +26,7 @@ assets/          art (backgrounds, characters, cgs, ui), audio (music, sfx, ambi
 episodes/epXX/   one folder per episode: episode.tres (metadata), dialogue/*.dialogue, scenes, scripts
 scenes/main/     boot / title scene
 scenes/vn/       VN player: background, characters, text box, choices, backlog, auto/skip, save/load
-scenes/ui/       other shared UI (settings, menus)
+scenes/ui/       other shared UI: save_load_screen/ (slot list), later settings and menus
 scenes/puzzles/  puzzle scenes (extend Puzzle)
 scripts/autoload/ GameState: current episode, story flags, save/load
 scripts/data/    Resource classes (Episode, …)

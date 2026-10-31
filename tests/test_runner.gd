@@ -12,7 +12,13 @@ extends SceneTree
 
 const GameStateScript := preload("res://scripts/autoload/game_state.gd")
 const EP01_DIALOGUE := "res://episodes/ep01/dialogue/ep01_placeholder.dialogue"
-const TEST_SAVE := "user://test_save.json"
+## Everything the tests write lives here, so the developer's real saves are never touched.
+const TEST_DIR := "user://test_run"
+const TEST_SAVE := TEST_DIR + "/test_save.json"
+const TEST_SAVES := TEST_DIR + "/saves"
+const TEST_SYSTEM := TEST_DIR + "/system.json"
+const TEST_LEGACY := TEST_DIR + "/legacy_save.json"
+const LOAD_SCREEN_SCENE := "res://scenes/ui/save_load_screen/save_load_screen.tscn"
 
 var passed := 0
 var failed := 0
@@ -20,6 +26,13 @@ var failed := 0
 
 func _initialize() -> void:
 	await process_frame  # Let autoloads enter the tree and run _ready.
+	# Point the real autoload at the test folder before any test can write a save.
+	_reset_test_dir()
+	var autoload_state := root.get_node_or_null("GameState")
+	if autoload_state != null:
+		autoload_state.save_dir = TEST_DIR + "/autoload_saves"
+		autoload_state.system_path = TEST_DIR + "/autoload_system.json"
+		autoload_state.clear_seen_lines()  # _ready loaded the developer's read lines.
 	for method in get_method_list():
 		var test_name: String = method.name
 		if not test_name.begins_with("test_"):
@@ -27,6 +40,7 @@ func _initialize() -> void:
 		if await call(test_name) != true:
 			failed += 1
 			push_error("FAIL %s: did not finish (runtime error?)" % test_name)
+	_remove_dir(TEST_DIR)
 	print("Results: %d passed, %d failed" % [passed, failed])
 	quit(1 if failed > 0 else 0)
 
@@ -44,6 +58,54 @@ func check_eq(actual: Variant, expected: Variant, label: String) -> void:
 
 
 # --- Helpers -----------------------------------------------------------------
+
+## A GameState that is not in the tree and writes only into the test folder.
+func _new_state() -> Node:
+	var state := GameStateScript.new()
+	state.save_dir = TEST_SAVES
+	state.system_path = TEST_SYSTEM
+	return state
+
+
+## Deletes everything the tests wrote and recreates the empty test folder.
+func _reset_test_dir() -> void:
+	_remove_dir(TEST_DIR)
+	DirAccess.make_dir_recursive_absolute(TEST_DIR)
+
+
+func _remove_dir(path: String) -> void:
+	if not DirAccess.dir_exists_absolute(path):
+		return
+	for file: String in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	for sub: String in DirAccess.get_directories_at(path):
+		_remove_dir(path.path_join(sub))
+	DirAccess.remove_absolute(path)
+
+
+func _write_text(path: String, text: String) -> void:
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	file.store_string(text)
+	file.close()
+
+
+func _read_json(path: String) -> Dictionary:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed if parsed is Dictionary else {}
+
+
+## Rewrites the saved_at time of a slot file, to make "newest slot" deterministic.
+func _set_saved_at(state: Node, slot: String, unix_time: int) -> void:
+	var path: String = state.slot_path(slot)
+	var data := _read_json(path)
+	data["meta"]["saved_at"] = unix_time
+	_write_text(path, JSON.stringify(data))
+
+
+## A scene_state like the VN player writes, with the given lines in the story history.
+func _scene_with_history(history: Array) -> Dictionary:
+	return {"episode": "ep01", "story": {"line_id": "4", "history": history}, "stage": {}}
 
 ## Stands in for the VN player's `Stage` in dialogue scripts. Must implement every
 ## Stage.* call the scripts make: a missing method makes Dialogue Manager assert.
@@ -118,7 +180,7 @@ func _play_through(runner: StoryRunner, pick_last: bool) -> bool:
 # --- Episodes ----------------------------------------------------------------
 
 func test_five_episodes_load_in_order() -> bool:
-	var state := GameStateScript.new()
+	var state := _new_state()
 	var episodes: Array[Episode] = state.get_episodes()
 	check_eq(episodes.size(), 5, "episode count")
 	for i in episodes.size():
@@ -132,7 +194,7 @@ func test_five_episodes_load_in_order() -> bool:
 # --- GameState ---------------------------------------------------------------
 
 func test_flags() -> bool:
-	var state := GameStateScript.new()
+	var state := _new_state()
 	check(not state.has_flag(&"met_stranger"), "flag starts unset")
 	check_eq(state.get_flag(&"met_stranger", false), false, "default returned")
 	state.set_flag(&"met_stranger")
@@ -142,8 +204,8 @@ func test_flags() -> bool:
 
 
 func test_save_round_trip() -> bool:
-	var state := GameStateScript.new()
-	state.delete_save(TEST_SAVE)
+	_reset_test_dir()
+	var state := _new_state()
 	state.current_episode = &"ep02"
 	state.complete_episode(&"ep01")
 	state.set_flag(&"trusted_stranger", true)
@@ -152,13 +214,16 @@ func test_save_round_trip() -> bool:
 	state.scene_state = {"episode": "ep02", "story": {"line_id": "7"}}
 	check_eq(state.save_game(TEST_SAVE), OK, "save ok")
 
-	var restored := GameStateScript.new()
+	var restored := _new_state()
 	check_eq(restored.load_game(TEST_SAVE), OK, "load ok")
 	check_eq(restored.current_episode, &"ep02", "current episode restored")
 	check(restored.is_episode_completed(&"ep01"), "completed episode restored")
 	check_eq(restored.get_flag(&"trusted_stranger"), true, "bool flag restored")
 	check_eq(restored.get_flag(&"player_name"), "Alex", "string flag restored")
-	check(restored.is_line_seen("res://x.dialogue:3"), "seen line restored")
+	check(not restored.is_line_seen("res://x.dialogue:3"), "read lines are not stored in the save file")
+	check(not _read_json(TEST_SAVE).has("seen_lines"), "save file has no seen_lines")
+	check(_read_json(TEST_SAVE).has("meta"), "save file has meta")
+	check_eq(_read_json(TEST_SAVE).get("version"), float(GameStateScript.SAVE_VERSION), "save file version")
 	check_eq(restored.scene_state.get("story", {}).get("line_id"), "7", "scene position restored")
 
 	state.delete_save(TEST_SAVE)
@@ -168,8 +233,8 @@ func test_save_round_trip() -> bool:
 
 
 func test_load_falls_back_to_backup() -> bool:
-	var state := GameStateScript.new()
-	state.delete_save(TEST_SAVE)
+	_reset_test_dir()
+	var state := _new_state()
 	state.set_flag(&"first", true)
 	state.save_game(TEST_SAVE)
 	state.set_flag(&"second", true)
@@ -180,7 +245,7 @@ func test_load_falls_back_to_backup() -> bool:
 	file.store_string("{ not json")
 	file.close()
 
-	var restored := GameStateScript.new()
+	var restored := _new_state()
 	check_eq(restored.load_game(TEST_SAVE), OK, "loads from .bak")
 	check(restored.has_flag(&"first"), "backup has the older flags")
 	check(not restored.has_flag(&"second"), "backup is the previous save")
@@ -197,9 +262,209 @@ func test_migrates_v1_save() -> bool:
 	check_eq(migrated.get("version"), GameStateScript.SAVE_VERSION, "version bumped")
 	check_eq(migrated.get("scene"), {}, "scene added")
 	check_eq(migrated.get("seen_lines"), [], "seen_lines added")
-	var state := GameStateScript.new()
+	check_eq(migrated.get("meta"), {"saved_at": 0, "preview": ""}, "meta added")
+	var state := _new_state()
 	state.from_dict(v1)
 	check_eq(state.get_flag(&"a"), true, "v1 flags kept")
+	state.free()
+	return true
+
+
+# --- Save slots ----------------------------------------------------------------
+
+func test_slot_ids() -> bool:
+	var state := _new_state()
+	var ids: Array[String] = state.slot_ids()
+	check_eq(ids.size(), GameStateScript.SLOT_COUNT + 1, "slot count")
+	check_eq(ids[0], GameStateScript.AUTO_SLOT, "auto slot first")
+	check_eq(ids[1], "1", "first manual slot")
+	check_eq(ids[-1], str(GameStateScript.SLOT_COUNT), "last manual slot")
+	check_eq(state.slot_path("3"), TEST_SAVES + "/slot_3.json", "slot path")
+	state.free()
+	return true
+
+
+func test_slot_round_trip_and_info() -> bool:
+	_reset_test_dir()
+	var state := _new_state()
+	state.current_episode = &"ep01"
+	state.set_flag(&"met", true)
+	state.scene_state = _scene_with_history([
+		{"speaker": "", "text": "Earlier line."},
+		{"speaker": "Stranger", "text": "[b]Hello[/b] there"},
+	])
+	check(not state.has_slot("2"), "slot starts empty")
+	check_eq(state.save_slot("2"), OK, "save to slot 2")
+	check(state.has_slot("2"), "slot 2 has a save")
+	check(not state.has_slot("3"), "slot 3 still empty")
+
+	var info: Dictionary = state.slot_info("2")
+	check_eq(info.get("episode"), "ep01", "info episode")
+	check_eq(info.get("in_episode"), true, "info in_episode")
+	check_eq(info.get("preview"), "Stranger: Hello there", "preview is the last line, bbcode stripped")
+	check(int(info.get("saved_at", 0)) > 1700000000, "info saved_at is a unix time")
+
+	var restored := _new_state()
+	check_eq(restored.load_slot("2"), OK, "load slot 2")
+	check_eq(restored.current_episode, &"ep01", "episode restored from slot")
+	check_eq(restored.get_flag(&"met"), true, "flag restored from slot")
+	check_eq(restored.scene_state.get("story", {}).get("line_id"), "4", "position restored from slot")
+
+	# Narration (no speaker) previews as plain text.
+	state.scene_state = _scene_with_history([{"speaker": "", "text": "The bus is late."}])
+	state.save_slot("2")
+	check_eq(state.slot_info("2").get("preview"), "The bus is late.", "narration preview has no speaker")
+
+	# Saved between episodes: no position, no preview.
+	state.scene_state = {}
+	state.complete_episode(&"ep01")
+	state.save_slot("auto")
+	var between: Dictionary = state.slot_info("auto")
+	check_eq(between.get("in_episode"), false, "between episodes is not in_episode")
+	check_eq(between.get("preview"), "", "no preview between episodes")
+
+	state.delete_slot("2")
+	check(not state.has_slot("2"), "slot deleted")
+	check_eq(state.slot_info("2"), {}, "deleted slot has no info")
+	state.free()
+	restored.free()
+	return true
+
+
+func test_empty_slot_info_and_latest_slot() -> bool:
+	_reset_test_dir()
+	var state := _new_state()
+	check_eq(state.slot_info("5"), {}, "empty slot info is {}")
+	check_eq(state.load_slot("5"), ERR_FILE_NOT_FOUND, "loading an empty slot fails")
+	check_eq(state.latest_slot(), "", "no saves, no latest slot")
+	state.free()
+	return true
+
+
+func test_latest_slot_is_newest() -> bool:
+	_reset_test_dir()
+	var state := _new_state()
+	for slot: String in ["1", "2", "auto"]:
+		check_eq(state.save_slot(slot), OK, "save slot %s" % slot)
+	_set_saved_at(state, "1", 1000)
+	_set_saved_at(state, "2", 3000)
+	_set_saved_at(state, "auto", 2000)
+	check_eq(state.slot_info("1").get("saved_at"), 1000, "saved_at read from meta")
+	check_eq(state.latest_slot(), "2", "slot 2 is newest")
+	_set_saved_at(state, "1", 5000)
+	check_eq(state.latest_slot(), "1", "slot 1 is newest after its time changes")
+	state.delete_slot("1")
+	check_eq(state.latest_slot(), "2", "deleted slot is skipped")
+	state.free()
+	return true
+
+
+func test_newer_save_version_refused() -> bool:
+	_reset_test_dir()
+	var state := _new_state()
+	state.set_flag(&"keep_me", true)
+	var future := {"version": GameStateScript.SAVE_VERSION + 1, "current_episode": "ep03", "flags": {"from_future": true}}
+	_write_text(state.slot_path("4"), JSON.stringify(future))
+	check_eq(state.load_slot("4"), ERR_FILE_UNRECOGNIZED, "newer version refused")
+	check_eq(state.current_episode, &"", "state untouched by refused load")
+	check(state.has_flag(&"keep_me") and not state.has_flag(&"from_future"), "flags untouched by refused load")
+	state.free()
+	return true
+
+
+func test_legacy_save_migrates_to_slot_1() -> bool:
+	_reset_test_dir()
+	var legacy := {
+		"version": 2,
+		"current_episode": "ep01",
+		"completed_episodes": [],
+		"flags": {"from_legacy": true},
+		"scene": _scene_with_history([{"speaker": "Stranger", "text": "Old save."}]),
+		"seen_lines": ["res://legacy.dialogue:1", "res://legacy.dialogue:2"],
+	}
+	_write_text(TEST_LEGACY, JSON.stringify(legacy))
+	var state := _new_state()
+	state.migrate_legacy_save(TEST_LEGACY)
+	check(state.has_slot("1"), "legacy save moved into slot 1")
+	check(not state.has_save(TEST_LEGACY), "legacy file removed")
+	check(state.is_line_seen("res://legacy.dialogue:2"), "legacy read lines merged")
+	var info: Dictionary = state.slot_info("1")
+	check_eq(info.get("episode"), "ep01", "migrated slot episode")
+	check_eq(info.get("in_episode"), true, "migrated slot keeps its position")
+	check(int(info.get("saved_at", 0)) > 0, "migrated slot gets a time (file time)")
+	var restored := _new_state()
+	check_eq(restored.load_slot("1"), OK, "migrated slot loads")
+	check_eq(restored.get_flag(&"from_legacy"), true, "migrated slot keeps flags")
+	restored.load_system()
+	check(restored.is_line_seen("res://legacy.dialogue:1"), "legacy read lines reached the system file")
+
+	# Slot 1 is taken now: a second legacy save must stay where it is.
+	var second := {"version": 2, "current_episode": "ep02", "flags": {"second": true}, "seen_lines": ["res://second.dialogue:1"]}
+	_write_text(TEST_LEGACY, JSON.stringify(second))
+	var other := _new_state()
+	other.migrate_legacy_save(TEST_LEGACY)
+	check(other.has_save(TEST_LEGACY), "legacy file kept when slot 1 is used")
+	check(not other.is_line_seen("res://second.dialogue:1"), "no read lines merged when slot 1 is used")
+	check_eq(other.slot_info("1").get("episode"), "ep01", "slot 1 not overwritten")
+
+	# No legacy file at all: nothing happens.
+	_reset_test_dir()
+	var empty := _new_state()
+	empty.migrate_legacy_save(TEST_LEGACY)
+	check(not empty.has_slot("1"), "nothing to migrate")
+	state.free()
+	restored.free()
+	other.free()
+	empty.free()
+	return true
+
+
+func test_seen_lines_are_global() -> bool:
+	_reset_test_dir()
+	var state := _new_state()
+	state.mark_line_seen("res://a.dialogue:1")
+	state.reset()
+	check(state.is_line_seen("res://a.dialogue:1"), "reset keeps read lines")
+	state.from_dict({"version": 3, "flags": {"x": true}})
+	check(state.is_line_seen("res://a.dialogue:1"), "from_dict keeps read lines")
+	check(not state.to_dict().has("seen_lines"), "to_dict has no seen_lines")
+
+	check_eq(state.save_slot("1"), OK, "save slot 1")
+	state.clear_seen_lines()
+	check(not state.is_line_seen("res://a.dialogue:1"), "clear_seen_lines clears")
+	state.load_slot("1")
+	check(not state.is_line_seen("res://a.dialogue:1"), "loading a slot does not bring read lines back")
+	state.load_system()  # save_slot wrote the system file.
+	check(state.is_line_seen("res://a.dialogue:1"), "load_system restores read lines")
+
+	state.mark_line_seen("res://b.dialogue:2")
+	check_eq(state.save_system(), OK, "save_system ok")
+	var other := _new_state()
+	other.mark_line_seen("res://c.dialogue:3")
+	other.load_system()
+	check(other.is_line_seen("res://a.dialogue:1") and other.is_line_seen("res://b.dialogue:2"), "system file round trip")
+	check(other.is_line_seen("res://c.dialogue:3"), "load_system merges into known lines")
+
+	# Old v2 slots carried their own read lines: from_dict still merges them.
+	var v2 := _new_state()
+	v2.from_dict({"version": 2, "seen_lines": ["res://old.dialogue:9"]})
+	check(v2.is_line_seen("res://old.dialogue:9"), "v2 save's read lines merged")
+	state.free()
+	other.free()
+	v2.free()
+	return true
+
+
+func test_loaded_scene_path() -> bool:
+	var state := _new_state()
+	state.scene_state = {"episode": "ep01", "story": {}}
+	check_eq(state.loaded_scene_path(), "res://episodes/ep01/ep01.tscn", "ep01 save opens the episode scene")
+	state.scene_state = {}
+	check_eq(state.loaded_scene_path(), "", "between episodes stays on the title")
+	state.scene_state = {"episode": "ep02"}
+	check_eq(state.loaded_scene_path(), "", "episode without an entry scene stays on the title")
+	state.scene_state = {"episode": "nope"}
+	check_eq(state.loaded_scene_path(), "", "unknown episode stays on the title")
 	state.free()
 	return true
 
@@ -380,4 +645,101 @@ func test_episode1_scene_shows_first_line() -> bool:
 	check_eq(player.get_node("%QuickMenu").get_child_count(), 6, "quick menu built")
 	player.queue_free()
 	await process_frame
+	return true
+
+## Counts disabled buttons among the given buttons.
+func _disabled_count(buttons: Array) -> int:
+	var count := 0
+	for button: Button in buttons:
+		if button.disabled:
+			count += 1
+	return count
+
+
+func test_save_load_screen_modes() -> bool:
+	var game_state := root.get_node_or_null("GameState")
+	if game_state == null:
+		check(false, "GameState autoload is available")
+		return true
+	_reset_test_dir()
+	game_state.reset()
+	game_state.scene_state = _scene_with_history([{"speaker": "Stranger", "text": "Hi."}])
+	check_eq(game_state.save_slot("2"), OK, "slot 2 saved for the screen")
+	game_state.reset()
+
+	# Never name SaveLoadScreen here: it uses GameState, which doesn't exist when this script compiles.
+	var screen := (load(LOAD_SCREEN_SCENE) as PackedScene).instantiate()
+	check(screen != null and screen.has_signal("slot_chosen"), "save/load screen scene is a SaveLoadScreen")
+	if screen == null:
+		return true
+	var modes: Dictionary = screen.get_script().Mode
+	root.add_child(screen)
+	await process_frame
+	var slot_count: int = game_state.slot_ids().size()
+	var chosen: Array[String] = []
+	screen.slot_chosen.connect(func(slot: String) -> void: chosen.append(slot))
+
+	screen.open(modes.LOAD)
+	var buttons: Array = screen._grid.get_children()
+	check(screen.visible, "screen shown in load mode")
+	check_eq(buttons.size(), slot_count, "load mode: one button per slot")
+	check_eq(_disabled_count(buttons), slot_count - 1, "load mode: only the used slot is enabled")
+	check(not buttons[2].disabled, "load mode: slot 2 enabled")
+	check(buttons[0].disabled and buttons[1].disabled, "load mode: empty auto and slot 1 disabled")
+	check(buttons[2].text.contains("Stranger: Hi."), "load mode: slot shows the preview")
+	buttons[2].pressed.emit()
+	check_eq(chosen, ["2"] as Array[String], "load mode: pressing a slot emits slot_chosen")
+
+	screen.open(modes.SAVE)
+	await process_frame  # Old buttons are freed on the next frame.
+	buttons = screen._grid.get_children()
+	check_eq(buttons.size(), slot_count, "save mode: one button per slot")
+	check_eq(_disabled_count(buttons), 1, "save mode: only the auto slot is disabled")
+	check(buttons[0].disabled, "save mode: auto slot disabled")
+	check(not buttons[1].disabled, "save mode: empty slot enabled")
+	chosen.clear()
+	buttons[1].pressed.emit()
+	check_eq(chosen, ["1"] as Array[String], "save mode: empty slot saves right away")
+	chosen.clear()
+	buttons[2].pressed.emit()
+	check(chosen.is_empty(), "save mode: used slot asks before saving")
+
+	screen.queue_free()
+	await process_frame
+	_reset_test_dir()
+	return true
+
+
+func test_episode1_save_to_slot() -> bool:
+	var game_state := root.get_node_or_null("GameState")
+	if game_state == null:
+		check(false, "GameState autoload is available")
+		return true
+	_reset_test_dir()
+	game_state.reset()
+	var player := (load("res://episodes/ep01/ep01.tscn") as PackedScene).instantiate()
+	root.add_child(player)
+	var frames := 0
+	while not player.can_save() and frames < 120:
+		frames += 1
+		await process_frame
+	check(player.can_save(), "player can save once the first line shows")
+	if not player.can_save():
+		player.queue_free()
+		return true
+	check_eq(player.save_game("1"), OK, "save_game(\"1\") ok")
+	check(game_state.has_slot("1"), "slot 1 written")
+	var info: Dictionary = game_state.slot_info("1")
+	check_eq(info.get("preview"), "It's late. The last bus is twenty minutes away.", "preview is the first line")
+	check_eq(info.get("episode"), "ep01", "slot episode")
+	check_eq(info.get("in_episode"), true, "slot is mid-episode")
+	check_eq(game_state.latest_slot(), "1", "slot 1 is the latest")
+
+	game_state.reset()
+	check_eq(game_state.load_slot("1"), OK, "slot 1 loads")
+	check_eq(game_state.loaded_scene_path(), "res://episodes/ep01/ep01.tscn", "loaded save opens ep01")
+	player.queue_free()
+	await process_frame
+	game_state.reset()
+	_reset_test_dir()
 	return true
