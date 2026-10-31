@@ -1,0 +1,11 @@
+# Test fixture: checks that Dialogue Manager imports and compiles .dialogue files.
+# Not used in the game.
+
+~ start
+Stranger: Hey. You dropped this.
+- Take it
+	$> GameState.set_flag("test_took_item")
+	Stranger: Thought so.
+- Ask who they are [if GameState.has_flag("test_met_stranger") == false /]
+	Stranger: Nobody important.
+=> END

@@ -80,3 +80,13 @@ func test_save_round_trip() -> bool:
 	state.free()
 	restored.free()
 	return true
+
+
+func test_dialogue_file_compiles() -> bool:
+	var dialogue := load("res://tests/fixtures/smoke.dialogue") as DialogueResource
+	check(dialogue != null, "smoke.dialogue loads as a DialogueResource")
+	if dialogue == null:
+		return true
+	check(dialogue.get_cues().has("start"), "has the 'start' cue")
+	check(dialogue.character_names.has("Stranger"), "knows the 'Stranger' character")
+	return true

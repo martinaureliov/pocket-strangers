@@ -1,7 +1,8 @@
 # Pocket Strangers
 
 A story-driven visual novel with a handful of puzzles, released in five episodes.
-Built with **Godot 4.7** (GDScript, GL Compatibility renderer).
+Built with **Godot 4.7** (GDScript, GL Compatibility renderer) and
+[Dialogue Manager 4](https://github.com/nathanhoad/godot_dialogue_manager) for story scripts.
 
 > Status: project setup. There's no story content yet.
 
@@ -15,13 +16,13 @@ Built with **Godot 4.7** (GDScript, GL Compatibility renderer).
 
 ```
 assets/          art (backgrounds, characters, cgs, ui), audio (music, sfx, ambience, voice), fonts
-episodes/epXX/   one folder per episode: episode.tres (metadata) + its scenes and scripts
+episodes/epXX/   one folder per episode: episode.tres (metadata), dialogue/*.dialogue, scenes, scripts
 scenes/main/     boot / title scene
 scenes/ui/       shared UI: dialogue box, choice menu, save/load, settings
 scenes/puzzles/  reusable puzzle scenes
 scripts/autoload/ GameState: current episode, story flags, save/load
 scripts/data/    Resource classes (Episode, …)
-addons/          third-party Godot plugins
+addons/          third-party Godot plugins (Dialogue Manager 4)
 tests/           headless GDScript tests
 docs/            game design docs
 .claude/skills/  agent skills for game design and development

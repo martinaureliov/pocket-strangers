@@ -36,9 +36,26 @@ The same applies to any addon added to `addons/` (e.g. Dialogue Manager): mentio
 - Add a test in `tests/test_runner.gd` (`test_*` method returning `true`) for any non-UI logic: state, saves,
   puzzle rules. Don't use bare `assert()` in tests because it hangs the headless run.
 
+## Dialogue (Dialogue Manager 4)
+
+Story scripts use [Dialogue Manager](https://github.com/nathanhoad/godot_dialogue_manager) **v4.2.0**, vendored in
+`addons/dialogue_manager/` (registered as the `DialogueManager` autoload, plugin enabled in `project.godot`).
+Docs (match the installed version): https://github.com/nathanhoad/godot_dialogue_manager/tree/v4.2.0/docs
+
+- Dialogue files live in `episodes/epXX/dialogue/*.dialogue`. Cue names are `snake_case`; each file starts at `~ start`.
+- Dialogue reads and writes story state only through `GameState`: conditions like
+  `[if GameState.has_flag("ep01_helped_stranger") /]` and mutations like `$> GameState.set_flag("ep01_helped_stranger")`.
+  Don't keep story state in other autoloads or in dialogue-local variables.
+- Keep presentation (backgrounds, sprites, transitions, music) out of dialogue text. Trigger it with mutations that call
+  a stage/presentation node, so the same script works in tests.
+- Mutations use `$>` (`do`/`set` are deprecated in v4).
+- Don't edit files inside `addons/dialogue_manager/`, so updates stay a clean replace. Update with the plugin's
+  built-in updater (Dialogue tab in the editor) or by copying a new release, then commit the whole folder.
+- The addon ships C# versions of some files (`*.cs` and the PascalCase `.tscn` files, e.g. `ExampleBalloon.tscn`). This project is GDScript-only;
+  use the lower-case GDScript versions (`example_balloon.tscn`, `dialogue_label.tscn`).
+
 ## Open decisions (ask before assuming)
 
-- Dialogue/scripting: a custom system, or an addon (Dialogue Manager, Dialogic 2, …)?
 - Target platforms: desktop, web, mobile?
 - Art style and resolution of character sprites.
 - Localization.
